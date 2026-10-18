@@ -1,0 +1,41 @@
+# Source trees (do not commit WebKit source)
+WebKit-*/
+wk1200-source/
+14.10-bid/
+
+# Raw logs (unsanitized)
+*.log
+host-stdout.log
+host-beacons.log
+
+# Private / unsanitized data
+.local/
+
+# Agent / IDE config
+.claude/
+.cursor/
+.vscode/
+
+# Secrets and credentials
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+credentials*
+secrets*
+
+# Node
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Build artifacts
+*.o
+*.so
+*.dylib

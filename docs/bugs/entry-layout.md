@@ -1,0 +1,1 @@
+# OpCall::Metadata Entry Layout
