@@ -54,6 +54,22 @@ Allocator reserves 100KB. The interpreter writes 4.29GB forward into heap.
 | p162 | Deep scan to 2000 bytes | In progress |
 | p163 | Device fingerprint | Complete |
 
+## Key Findings
+
+1. **MetadataTable integer overflow triggers on device.** JavaScriptCore Bug 317632. `UnlinkedMetadataTable::finalize()` uses an `unsigned` accumulator. 38,348,816 call sites wraps it to 100,096 bytes. The interpreter allocates a 100KB buffer but writes 4.29GB forward into heap memory.
+
+2. **Bait and switch heap groom controls where the write lands.** Bait strings fill the heap first. Target strings go above them. Free the baits and run GC. The metadata buffer takes a freed bait slot. The sweep goes forward into the targets.
+
+3. **The sweep corrupts JSString objects.** The overflow overwrites `m_fiber` in JSString headers inside MarkedSpace. All 14 targets report `.length = 81400` after the sweep.
+
+4. **StringImpl backing data stays intact.** `charCodeAt` returns the original 0x41 because `m_data8` still points to the original buffer. The corruption is in the JSString header, not the character data.
+
+5. **The overflow happens at runtime, not compile time.** p149g confirmed zero corruption after compilation. The OOB write occurs when the LLInt runs each `op_call`.
+
+6. **Gradient fill strings crash the browser.** `String.fromCharCode` loops create ~1.4M extra rope cells that change the heap layout and crash before the overflow finishes.
+
+7. **All Relapse WebKit bugs are patched on 14.10.** p160 tested the full set. None work.
+
 ## How to Use
 
 1. Clone the repo
