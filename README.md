@@ -218,7 +218,7 @@ T6 — WeakRef + GC pressure: 100/100 alive, 0 dead, no type confusion
 
 13. **All PLATFORM(PLAYSTATION) guards are logging-only.** 11 guards across WK-1400 (SourceBuffer.cpp, ContentSecurityPolicy.cpp, VM.cpp, JSLock.cpp, etc.). All are `PS_LOG` debug prints or skip non-safety functions like `monitorBufferingRate()`. No safety checks are weakened.
 
-14. **Canvas/OffscreenCanvas contexts use IsoHeap.** `WTF_MAKE_ISO_ALLOCATED` isolates these objects from general FastMalloc/JSC heap. Cross-type confusion via MetadataTable sweep or other linear overwrites cannot reach them.
+14. **~~Canvas/OffscreenCanvas contexts use IsoHeap~~ — RETRACTED: IsoHeap is OFF on PS5.** `WTF_MAKE_ISO_ALLOCATED` compiles to standard FastMalloc on FreeBSD/PlayStation (`BPLATFORM(PLAYSTATION)` in BPlatform.h:341). Canvas2D contexts share the same heap as all other WebCore/JSC objects. Gigacage also disabled. This makes CVE-2026-43720 exploitable — same-type and cross-type reclaim both work.
 
 15. **All InternalReadableStream operations route through JS builtins.** Every C++ bridge function uses `jsDynamicCast` with null checks. The JS builtin wall means type confusion via private-name inversion cannot reach C++ code paths that access internal fields directly.
 
@@ -228,9 +228,90 @@ T6 — WeakRef + GC pressure: 100/100 alive, 0 dead, no type confusion
 
 17. **CSSFontFace UAF (CVE-2026-43715) is DoS-only.** The free and use are synchronous — no grooming window. All spray strategies fail under every timing combination. CSSFontFace is the sole occupant of the 192-byte size class.
 
-18. **Canvas getContext UAF (CVE-2026-43720) is DEAD.** IsoHeap wall prevents cross-type replacement. Community-confirmed: AB, string, and Blob carriers all fail.
+18. **~~Canvas getContext UAF (CVE-2026-43720) is DEAD~~ — RETRACTED: ALIVE AND EXPLOITABLE.** IsoHeap is OFF on PS5. Same-type reclaim (V573) gives full bidirectional R/W. V630 confirmed ALL 12 Canvas2D APIs work through the alias. See [CVE-2026-43720 Exploitation](#cve-2026-43720--canvas-getcontext-uaf-confirmed-rw) below.
 
 19. **Unchecked jsCast in JSC runtime is safe.** Every unchecked `jsCast<>` is preceded by a C++ type check (`@isRegExpObject`, `@isMap`, `isTypedView()`, etc.). Private-name inversion cannot bypass these because they check cell type, not property presence.
+
+## CVE-2026-43720 — Canvas getContext() UAF (Confirmed R/W)
+
+**This is the primary exploitation vector.** IsoHeap is OFF on PS5 — all WebCore objects live in the same FastMalloc heap.
+
+### The Bug
+
+`HTMLCanvasElement::getContext()` reads dictionary options via JS getters BEFORE setting the new context. A re-entrant getter creates a 2d context; the outer call then replaces it with bitmaprenderer, freeing the 2d context while its JS wrapper survives.
+
+```javascript
+var innerCtx;
+var canvas = document.createElement('canvas');
+var opts = {};
+Object.defineProperty(opts, 'alpha', {
+  get: function() {
+    innerCtx = canvas.getContext('2d');
+    return true;
+  }
+});
+canvas.getContext('bitmaprenderer', opts);
+// innerCtx is now a dangling reference to freed 768-byte memory
+```
+
+### Same-Type Reclaim (V573 — Confirmed on PS5 14.10)
+
+Spray 500 Canvas2D contexts. One reclaims the freed 768-byte slot. `innerCtx` and `sprayCtxs[N].ctx` are now aliases to the same live C++ CanvasRenderingContext2D object.
+
+### Confirmed Primitives (V630 — All 12 APIs)
+
+| API | What works | Type |
+|-----|-----------|------|
+| lineWidth | Bidirectional double R/W | number |
+| miterLimit | Bidirectional double R/W | number |
+| globalAlpha | Bidirectional double R/W | number |
+| fillStyle | Color string R/W | string |
+| strokeStyle | Color string R/W | string |
+| font | Font string R/W | string |
+| setLineDash / getLineDash | 500-double array round-trip | Float64Array |
+| getTransform | DOMMatrix object | object |
+| save / restore | 3-level state stack cycle | - |
+| createPattern | Pattern from HTMLCanvasElement | object |
+| measureText | TextMetrics object | object |
+
+### Current Blocker: Info Leak
+
+We have full R/W of typed Canvas2D state fields, but **no path to read a raw heap pointer**. All APIs return typed JS values. 10 dedicated info leak approaches exhausted:
+
+1. CanvasStyle variant type confusion (chicken-and-egg)
+2. WTF::Vector stale data after restore (m_size gates all reads)
+3. AB zero-init wall (memset(0) on every path)
+4. Freed memory read (destructor nulls m_stateStack.m_buffer → crash)
+5. JSC butterfly overlap (conservative GC pins cells)
+6. StructureID confusion (direct pointer, no table)
+7. FinalizationRegistry / WeakRef timing (no pointer in callback)
+8. DontInitialize AB paths — Blob/Fetch/XHR/Worker (all return zeros on device)
+9. libpas race CVE-2025-43531 (zero-init blocks data)
+10. Canvas backing store (tryFastCalloc zeros memory)
+
+**Community help wanted.** If you know a way to leak a heap pointer through Canvas2D or related DOM APIs on WebKit WK-1400 (no JIT, LLInt-only), please open an issue or reach out on X.
+
+### Exploitation Chain (Once Info Leak Is Solved)
+
+1. V573 same-type reclaim → alias
+2. Info leak → heap address
+3. Grow stateStack → realloc → free old buffer → AB spray reclaims it
+4. Forge lineDash Vector in AB (m_buffer = target, m_size = N)
+5. getLineDash through alias → arbitrary read
+6. setLineDash through alias → arbitrary write (via move-assign free + fresh alloc)
+7. Overwrite vtable or `startOfStructureHeap` (writable — JSC Config unfrozen)
+8. ROP chain → kernel syscall
+
+### Probe Results Summary
+
+| Probe | Purpose | Result |
+|-------|---------|--------|
+| V573 | Same-type reclaim diagnostic | Alias at idx=11, R/W confirmed |
+| V589 | BMR trigger validation | `uaf-ok: inner=OK` |
+| V630 | Full 12-API alias diagnostic | ALL APIs pass |
+| V627 | Groomed freed-memory read | CRASH (destructor nulls m_buffer) |
+| V632 | Two-stage zero-alloc read | Stage 1 pass, Stage 2 pending |
+| V641 | DontInitialize AB paths | All return zeros |
 
 ## Secondary Path: CVE-2023-42890
 
@@ -254,11 +335,13 @@ NetworkLoad object is ~1024 or 2048 bytes in bmalloc. `m_redirectCompletionHandl
 | Stage | Status |
 |-------|--------|
 | Bug identification (Bug 317632) | Done (but DEAD on PS5 — OOM) |
-| Source audit (WK-1400) | Done — 15+ subsystems, 0 exploitable from browser |
+| Source audit (WK-1400) | Done — 15+ subsystems |
 | Device fingerprinting | Done (V399, V520, V521) |
-| CVE triage (2023-2026) | Done — all dead (JIT/WASM/WebGL requirements) |
+| CVE triage (2023-2026) | Done — all dead except CVE-2026-43720 |
 | PLATFORM(PLAYSTATION) audit | Done — logging only, no safety gaps |
-| WebKit entry bug | **NOT FOUND** — all leads exhausted |
+| WebKit entry bug (CVE-2026-43720) | **CONFIRMED** — UAF + same-type reclaim + full R/W |
+| Info leak primitive | **BLOCKED** — 10 paths exhausted, need heap pointer |
+| Arbitrary R/W | Designed (lineDash Vector forge) — needs info leak |
 | Kernel exploit | BLOCKED — no browser code execution |
 | Privilege escalation | Not started |
 

@@ -256,6 +256,52 @@ None are triggerable from the browser. Mostly UI/viewport tests. The postMessage
 
 ---
 
+## Info Leak Paths (Canvas UAF Context)
+
+All paths investigated with 13+ independent agent audits. None produce a raw heap pointer.
+
+### Canvas2D API Surface — DEAD: All Typed Values
+
+V630 confirms ALL 12 Canvas2D APIs work through the V573 alias (lineWidth, miterLimit, globalAlpha, fillStyle, strokeStyle, font, getLineDash, setLineDash, getTransform, createPattern, measureText, save/restore). Every API returns a typed JS value (number, string, or object). No API exposes raw memory.
+
+### CanvasStyle Variant Type Confusion — DEAD: Chicken-and-Egg
+
+std::variant with index byte at State+24. Flipping index 2→1 would reinterpret gradient RefPtr as Color uint64. But changing the index byte requires raw byte access to the State, which requires the info leak this would produce.
+
+### WTF::Vector Stale Data (restore) — DEAD: API-Unreachable
+
+removeLast() decrements m_size but never frees buffer. Stale pointer data SURVIVES in buffer past m_size after restore(). But Vector::size() gates ALL Canvas2D API reads — no API reads past m_size. State copy constructor fully overwrites stale slots on re-save.
+
+### AB Zero-Init Wall — DEAD: All Paths
+
+ArrayBuffer allocation: tryMalloc + memset(0) on every path. Confirmed on device (V566, V641). DontInitialize paths (Blob/Fetch/XHR/Worker segment gaps) also return zeros on PS5 (V641).
+
+### Freed Memory Read — DEAD: Destructor Invalidates
+
+V627 confirms reading through freed Canvas2D context crashes regardless of grooming. The ~CanvasRenderingContext2D destructor runs ~Vector on m_stateStack which calls resetBufferAndCapacity() setting m_buffer=nullptr. state() then dereferences nullptr+offset → SIGSEGV.
+
+### JSC-Level Paths — DEAD: 10 Paths Checked
+
+Butterfly overlap, StructureID confusion, JSFunction pointer leak, structured clone pointer exfiltration, FinalizationRegistry/WeakRef callback timing, stateStack realloc overlap, CanvasStyle forge, AB overlay scan — all confirmed dead. Structure validation present, GC conservative scan blocks all butterfly reclaim.
+
+### DontInitialize AB Paths — DEAD: Zero on Device
+
+Blob segment gap, Worker Float64Array, Fetch response body, XHR response ArrayBuffer — all tested on device (V641). Every path returns zeros. The DontInitialize codepath may not be reachable or the kernel zero-fills the backing pages.
+
+### libpas CVE-2025-43531 Race — DEAD: Zero-Init Blocks Leak
+
+libpas confirmed on PS5 (BPLATFORM(PLAYSTATION) at BPlatform.h:341). The bmalloc/libpas race condition is theoretically present but zero-init on allocation destroys any stale data that survives the race window.
+
+### MSE buffered() — DEAD: DoS Only
+
+MediaSource.buffered returns a TimeRanges object. Heap layout manipulation via append/remove cycles confirmed but no info leak primitive — only DoS via OOM.
+
+### Canvas Backing Store Uninit — DEAD: tryFastCalloc
+
+Canvas backing store uses tryFastCalloc (calloc = zero-init). Even if freed backing store memory contains pointers, reclaiming it with a new canvas zeros it. getImageData always returns zero-initialized pixel data.
+
+---
+
 ## Summary
 
 | Category | Investigated | Dead | Alive/Safe |
@@ -266,7 +312,7 @@ None are triggerable from the browser. Mostly UI/viewport tests. The postMessage
 | DOM / Rendering | 13 | 9 | 4 (1 ALIVE: Canvas UAF) |
 | CVE Audit | 5 | 5 | 0 |
 | Kernel / Syscall | 3 | 3 | 0 |
-| Info Leak | 2 | 2 | 0 |
-| **Total** | **41** | **36** | **5** |
+| Info Leak (Canvas UAF) | 10 | 10 | 0 |
+| **Total** | **49** | **44** | **5** |
 
 Note: Canvas getContext() UAF (CVE-2026-43720) was previously listed as dead due to IsoHeap but has been **retracted** — IsoHeap is OFF on PS5. It is now the primary exploitation vector with confirmed R/W. See CONFIRMED_VULNS.md.

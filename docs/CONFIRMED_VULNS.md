@@ -33,6 +33,17 @@ The bitmaprenderer outer avoids same-size-class reuse (80B vs 768B) that kills t
 - V562: ALL 12 Canvas2D APIs work through alias — clean complete run
 - V573: Full same-type reclaim + bidirectional R/W on PS5 14.10
 - V589: BMR trigger confirmed working (`uaf-ok: inner=OK`)
+- V630: Comprehensive alias diagnostic — ALL 12 Canvas2D APIs confirmed working through alias:
+  - lineWidth/miterLimit/globalAlpha: bidirectional double R/W
+  - fillStyle/strokeStyle: color string R/W
+  - font: string R/W
+  - setLineDash(500)/getLineDash: 500-double array round-trip PERFECT
+  - getTransform: DOMMatrix object read
+  - save/restore: 3-level cycle (333→222→111) works
+  - createPattern: HTMLCanvasElement pattern creation works
+  - measureText: TextMetrics object returned correctly
+- V632: Two-stage test (alias + zero-alloc freed reads) — Stage 1 alias confirmed
+- V641: Blob/Worker/Fetch transfer race tests — all DontInitialize paths return zeros
 
 **IsoHeap is OFF on PS5.** `WTF_MAKE_ISO_ALLOCATED` compiles to standard FastMalloc on FreeBSD/PlayStation. Gigacage also disabled — AB backing stores share the same heap as JSC/WebCore objects. Confirmed by Synacktiv writeup + BPlatform.h:341 `BPLATFORM(PLAYSTATION)`.
 
@@ -44,7 +55,9 @@ The bitmaprenderer outer avoids same-size-class reuse (80B vs 768B) that kills t
 **Info leak candidate (OOB state stack read):**
 Inner ctx created with 8 saves → `m_stateStack.m_size=9`. After BMR free + same-type reclaim, new ctx has 0 saves (`m_size=1`). Stale wrapper reads `m_stateStack.last()` using stale `m_size=9` → `buffer[8]` = offset 3200 = 2800 bytes past end of 1-State buffer. Reads adjacent heap allocations as float64. 48-bit x86-64 pointer is exactly representable as float64. libpas uses out-of-band bitmap tracking — freed chunks retain all stale data, not zeroed.
 
-**Next steps:** Build probe to confirm OOB read returns non-zero pointer-like values. Then: fake lineDash Vector → arbitrary R/W → vtable hijack → ROP → kernel.
+**Current blocker:** INFO LEAK. All 12 Canvas2D APIs return typed JS values — no path found to read a raw heap pointer. 10 dedicated info leak paths exhausted (see DEAD_ENDS.md "Info Leak Paths" section). Freed memory reads crash (destructor nulls m_stateStack.m_buffer). AB reclaim zeros data. DontInitialize AB paths return zeros on device. Community help wanted on the info leak primitive.
+
+**Exploitation chain once info leak is solved:** fake lineDash Vector → arbitrary R/W → vtable hijack → ROP → kernel.
 
 **Fix:** Commit 2693828e8d73 (2026-06-29): re-checks `m_context` after dictionary conversion. Not present in WK-1400.
 
