@@ -122,6 +122,25 @@ All probes tested on PS5 14.10. Results from device beacon logs.
 | p170 | CSSFontFace UAF via WOFF2 font cycling | Network errors (PS5 rejects WOFF2) |
 | p175 | CSSFontFace UAF via TTF from ArrayBuffer | Deployed, awaiting results |
 
+## Canvas UAF Probes — CVE-2026-43720 (probes/canvas-uaf/ + probes/1410-guide/)
+
+| Probe | Purpose | Device Result |
+|-------|---------|---------------|
+| v527 | AB reclaim discriminator (cobra PR#13) | lineWidth=9999.99 → AB RECLAIMED |
+| v527b | Ref-pin bypass: canvas lever + AB reclaim | LEVER: reset=no-reset, type=no-type-attr, width=ok |
+| v571 | lineWidth diagnostic | Offset calibration |
+| v573 | Same-type reclaim diagnostic | CONFIRMED: bidirectional R/W, idx=9 |
+| v578 | Light spray diagnostic | Spray count confirmed |
+| v580 | Info leak capability probe | AudioContext=NO, IDB=NO, Workers=YES, WS=YES |
+| v583 | JSC capability test | BigInt+DV=YES, MC+xfer=YES, class/super=YES |
+| v585 | AB↔Context cross-type reclaim | trigger+spray beacons received |
+| v587 | State buffer reclaim (Proxy trigger) | CRASHED: size mismatch + GC during spray |
+| v588 | Relapse scope leak test | Scope leak DEAD, structured clone+MC WORKS |
+| v589 | State buffer reclaim (BMR trigger) | uaf-ok: inner=OK, CRASHED during spray |
+| v592 | Butterfly harvest zero-alloc pre-read | Deployed by peer session |
+| v594 | BMR trigger diagnostic | Ready, not yet tested |
+| v597 | CSS filter uninit + stale heap | Ready, not yet tested |
+
 ## Relapse Probes (probes/relapse-test/)
 
 | Probe | Purpose | Device Result |

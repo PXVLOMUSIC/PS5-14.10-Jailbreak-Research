@@ -132,17 +132,13 @@ UAF exists but free and use are synchronous. All grooming fails.
 
 Eager promise + setProperty adopt path writes `m_status 0x03` to freed FastMalloc memory. However, no JS re-entry window exists between free and use. The 192-byte size class contains only CSSFontFace — no type confusion target. All spray strategies (AB, string, Blob) fail. Confirmed DoS-only with p504.
 
-### Canvas getContext() UAF (CVE-2026-43720) — DEAD: IsoHeap
+### Canvas getContext() UAF (CVE-2026-43720) — ~~DEAD~~ ALIVE: IsoHeap is OFF on PS5
 
-Canvas contexts use `WTF_MAKE_ISO_ALLOCATED`. IsoHeap prevents cross-type replacement.
+**RETRACTED.** IsoHeap (`WTF_MAKE_ISO_ALLOCATED`) compiles to standard FastMalloc on FreeBSD/PlayStation. Confirmed by `BPLATFORM(PLAYSTATION)` in BPlatform.h:341 and Synacktiv writeup. Same-type reclaim, AB reclaim, and bidirectional R/W all CONFIRMED WORKING on device. See CONFIRMED_VULNS.md #1.
 
-Reentrant `getContext()` creates a dangling wrapper, but IsoHeap isolation means the freed context memory cannot be replaced with attacker-controlled data. AB/string/Blob/Path2D carriers all confirmed failed. Community-confirmed dead.
+### OffscreenCanvas getContext() — DEAD: API Missing
 
-### OffscreenCanvas getContext() — DEAD: Same IsoHeap Wall
-
-Identical reentrant pattern at OffscreenCanvas.cpp:243-263, same IsoHeap isolation.
-
-The A4 audit identified the same vulnerability pattern, but the same mitigation applies.
+Identical reentrant pattern at OffscreenCanvas.cpp:243-263. IsoHeap is actually OFF (see Canvas UAF retraction), but `OffscreenCanvas` constructor is `undefined` on PS5 14.10 — API completely absent.
 
 ### EventTarget UAF — DEAD: isJSExecutionForbidden
 
@@ -218,6 +214,26 @@ Sony removed shared memory subsystem on firmware 14.10.
 
 The `USHMF_LINKED` single flag check is impossible because the SHM syscalls are stubbed. PS5Dev/PS5-UMTX-Jailbreak covers FW up to 13.60 only. Our probe 10 used the wrong syscall number, confirming the stub.
 
+### AutoFillButtonElement Raw m_owner& — DEAD: InjectedBundle Only
+
+Same unfixed raw `AutoFillButtonOwner& m_owner` pattern as CVE-64783 DataListButtonElement. But `setShowAutoFillButton()` is only callable from `InjectedBundleNodeHandle.cpp:319` — a native C++ API requiring browser chrome code execution. No JS/HTML/CSS path creates an AutoFillButton. SpinButton has the same pattern but is protected by `removeSpinButtonOwner()` in `destroyShadowSubtree()`.
+
+### Relapse Scope Leak — DEAD: Binary Fix on 14.10
+
+ALL Relapse Stage-1 scope leak variants tested (V588): direct `leakScopeObject()`, eval variant, 5 `super` sub-tests. All return `undefined` on PS5 14.10. Binary-level fix present.
+
+### RAB Bugs 312513 + 285876 — DEAD: Mitigated
+
+V563 confirmed both mitigated on PS5 14.10. `grow()` zeros new bytes. No info leak.
+
+### WebGL readPixels Uninit Leak — DEAD: No WebGL
+
+`readPixelsForPaintResults` has no error check → `toDataURL` could leak heap on GL failure. But `WebGLRenderingContext` constructor is absent on PS5 14.10 (V566: `WebGL=NO`). Unreachable.
+
+### SVG Filter Integer Overflow — DEAD: All Paths Checked
+
+`CheckedUint32` overflow detection, `RELEASE_ASSERT`, 4096 dimension clamp, and NaN→empty result. All four SVG filter overflow angles are mitigated.
+
 ### CVE-2026-64783 — DataListButtonElement UAF — DEAD: No Datalist on PS5
 
 **Bug 313521.** `DataListButtonElement::defaultEventHandler()` holds raw `DataListButtonOwner& m_owner`. Changing `<input>` type inside click handler frees `TextFieldInputType` while event dispatch is in progress. Fixed in commit `be08720593` (WeakPtr + removeOwner).
@@ -242,14 +258,15 @@ None are triggerable from the browser. Mostly UI/viewport tests. The postMessage
 
 ## Summary
 
-| Category | Investigated | Dead | Safe/Moot |
-|----------|-------------|------|-----------|
+| Category | Investigated | Dead | Alive/Safe |
+|----------|-------------|------|------------|
 | JSC Engine | 10 | 10 | 0 |
 | Streams API | 4 | 4 | 0 |
-| RAB | 3 | 2 | 1 |
-| DOM / Rendering | 10 | 7 | 3 |
+| RAB | 4 | 3 | 1 |
+| DOM / Rendering | 13 | 9 | 4 (1 ALIVE: Canvas UAF) |
 | CVE Audit | 5 | 5 | 0 |
 | Kernel / Syscall | 3 | 3 | 0 |
-| **Total** | **35** | **31** | **4** |
+| Info Leak | 2 | 2 | 0 |
+| **Total** | **41** | **36** | **5** |
 
-All 34 investigated vectors are either confirmed dead (vulnerability does not exist, is patched, or is unexploitable on this platform) or confirmed safe (no vulnerability exists).
+Note: Canvas getContext() UAF (CVE-2026-43720) was previously listed as dead due to IsoHeap but has been **retracted** — IsoHeap is OFF on PS5. It is now the primary exploitation vector with confirmed R/W. See CONFIRMED_VULNS.md.

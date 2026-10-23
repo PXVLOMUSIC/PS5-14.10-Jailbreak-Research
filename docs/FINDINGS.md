@@ -117,3 +117,39 @@ All 7 formats supported: PNG, JPEG, GIF, WebP, BMP, SVG, ICO. createImageBitmap 
 - Truncated PNG IDAT loads successfully (potential uninit memory read)
 - 0x0, 65535x65535, 32768x32768, INT_MAX width all rejected
 - CIB huge crop clamped to 1x1
+
+---
+
+## Canvas UAF Exploitation Chain (CVE-2026-43720)
+
+### IsoHeap OFF on PS5
+
+`WTF_MAKE_ISO_ALLOCATED` compiles to standard FastMalloc on FreeBSD/PlayStation. `BPLATFORM(PLAYSTATION)` at BPlatform.h:341 disables IsoHeap. Gigacage also disabled — AB backing stores share the same heap as JSC/WebCore objects. Confirmed by Synacktiv writeup and CSSFontFace exploitation research.
+
+### Same-Type Reclaim + Bidirectional R/W (V573)
+
+BMR trigger (bitmaprenderer outer + 2d inner via defineProperty getter) confirmed working on device. 500x Canvas2D spray reclaims freed 768B context slot. Stale wrapper aliases spray context at index 9. All 12 Canvas2D APIs work through alias: lineWidth, miterLimit, globalAlpha, fillStyle, strokeStyle, getTransform, setTransform, getLineDash, setLineDash, measureText, save, restore.
+
+### State Buffer Reclaim (V587/V589)
+
+8x `save()` inside getter grows `Vector<State>` out-of-line to ~6400 bytes (bmalloc class 6656). BMR trigger frees inner context + state buffer. AB spray can reclaim the freed state buffer. V589 confirmed BMR trigger works (`uaf-ok: inner=OK`) but crashes during spray phase — likely GC pressure from 500+ AB allocations.
+
+### OOB State Stack Read — Info Leak Candidate
+
+**Key insight:** After BMR free + same-type reclaim, the stale wrapper retains `m_stateStack.m_size = 9` (from 8 saves) while the new context has `m_size = 1`. Reading `m_stateStack.last()` through the stale wrapper indexes at `buffer[8]` = offset 3200 = **2800 bytes past the end** of the new context's 1-State buffer.
+
+This reads from adjacent heap allocations. A 48-bit x86-64 pointer is exactly representable as IEEE 754 float64, so `lineWidth` returns the raw pointer value as a JavaScript number.
+
+**libpas allocator behavior:** Out-of-band bitmap tracking — freed chunks retain all stale data. No in-band freelist pointers. Freed memory is NOT zeroed.
+
+**Status:** Probe needed to confirm non-zero pointer-like values from OOB read on device.
+
+### Exploitation Path
+
+1. OOB state stack read → heap address leaked as float64
+2. Fake lineDash `Vector<double>` in AB: set `m_buffer = TARGET`, `m_capacity = N`, `m_size = N`
+3. `setLineDash([v1,...,vN])` → in-place memcpy to TARGET = arbitrary write
+4. `getLineDash()` → reads from `m_buffer` = arbitrary read
+5. Read JSGlobalObject vtable → binary base → ROP gadgets
+6. Vtable hijack → ROP chain (x86-64, no PAC, no JIT)
+7. Kernel escalation via reachable syscall surface
