@@ -70,7 +70,7 @@ if(lwCheck!==MARKER){bk('NO-RECLAIM','lw='+lwCheck);say('No reclaim: lw='+lwChec
 else{bk('RECLAIM','OK');}
 
 /* ===== PHASE 2: dangling lineDash read ===== */
-/* Strategy (DeepSeek #1):
+/* Strategy:
    1. Set big lineDash on wrapper A → allocates heap buffer P1 (NDASH*8 bytes)
    2. save() → State copied, includes m_buffer=P1 + m_size=NDASH
    3. setLineDash([]) → frees P1
