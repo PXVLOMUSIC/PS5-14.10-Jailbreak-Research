@@ -1,58 +1,82 @@
 # Strategy
 
-## Current Phase: Broad Surface Audit
+## Current Phase: Exploitation (Phase 4)
 
-MetadataTable overflow (CVE-2026-64784) is confirmed real but blocked by the 4.29GB sweep. We are now auditing every reachable WebCore and JSC surface for a new entry point.
+CVE-2026-43720 (Canvas getContext() reentrant UAF) is confirmed exploitable. Same-type reclaim gives full R/W of Canvas2D state fields. The current blocker is an info leak primitive to defeat ASLR.
 
-## Approach
+## Phases
 
-### Phase 1: Recon probes on device (done)
-Fingerprint the PS5 WebView. Determine which APIs exist, which formats are supported, which parser paths are reachable from JavaScript.
+### Phase 1: Recon probes on device -- DONE
+
+Fingerprinted the PS5 WebView. Determined API availability, format support, parser paths reachable from JavaScript.
 
 Results:
-- p163: Full API availability matrix
+- p163 / V399: Full API availability matrix
 - p161a: FontFace API recon (15 tests)
 - p161b: Image decoder recon (19 tests)
+- V520: MSE SourceBuffer re-entrancy -- all safe
+- V521: Structure spray, butterfly realloc, megamorphic IC -- no anomalies
 
-### Phase 2: Source audit (in progress)
-Run dedicated audit agents against every WebCore module in WebKit-1200. One agent per attack surface. Each agent reads the actual source code and reports specific bugs with file paths and line numbers.
+### Phase 2: Source audit -- DONE
 
-Currently auditing 17+ surfaces including font parsers, image decoders, DOM mutation, SVG, XML parsing, Workers, Canvas, CSS layout, HTML parser, WebSocket, editing commands, Shadow DOM, Fetch/URL, CSS animations, and WeakRef/FinalizationRegistry.
+15+ WebKit subsystems audited against WK-1400 source. Zero exploitable entry bugs from source audit alone -- but confirmed IsoHeap OFF and Gigacage disabled, which reopened CVE-2026-43720.
 
-### Phase 3: Targeted fuzzing probes
-For each source finding rated PLAUSIBLE or CONFIRMED, build a probe that triggers the specific code path on device. Ship as JS, load via beacon server, read results from beacon log.
+Subsystems audited: MetadataTable, MSE/SourceBuffer, ReadableStream/tee(), Canvas2D, CSSFontFace, structuredClone, RAB, Yarr regex, NodeIterator, XMLParser/CustomElements, sort()/TypedArray, DirectArguments, ClonedArguments, font parsing, SVG filters.
 
-### Phase 4: Exploitation
-Once a surviving bug is found on device:
-1. Determine primitive type (read, write, type confusion, UAF)
-2. Build ASLR leak if needed
-3. Build arbitrary R/W primitive
-4. Achieve WebKit process code execution
-5. Pivot to kernel
+See [WK1400_SOURCE_AUDIT.md](WK1400_SOURCE_AUDIT.md) for details.
 
-## What We Need
+### Phase 3: Targeted probes -- DONE
 
-The ideal bug for PS5 14.10 exploitation:
-- Reachable from JavaScript in the PS5 WebView
-- Does not require JIT, WASM, SharedArrayBuffer, or WebGL
-- Produces a controlled memory corruption (not just a crash)
-- Corruption is readable from JavaScript (not write-only)
-- Survives: the bug should not crash the process before JS regains control
+CVE-2026-43720 confirmed on device through a series of probes:
+- V573: Same-type reclaim -- CONFIRMED (alias at idx=9)
+- V562: All 12 Canvas2D APIs through alias -- clean complete run
+- V630: Full 12-API alias diagnostic -- ALL PASS (alias at idx=11)
+- V589: BMR trigger validation -- `uaf-ok: inner=OK`
+
+49 total attack vectors investigated, 44 confirmed dead. 5 bugs found (1 exploitable, 4 contained/blocked). See [DEAD_ENDS.md](DEAD_ENDS.md) and [CONFIRMED_VULNS.md](CONFIRMED_VULNS.md).
+
+### Phase 4: Exploitation -- IN PROGRESS
+
+**Done:**
+- UAF trigger (bitmaprenderer outer + defineProperty getter + 2d inner)
+- Same-type reclaim (500x Canvas2D spray reclaims freed 768B slot)
+- Bidirectional R/W via alias (lineWidth, miterLimit, globalAlpha, fillStyle, getLineDash, etc.)
+- Crash oracle (forge m_stateStack to target address, lineWidth reads 8 bytes)
+- Heap topology mapping (V650-V655 binary subdivision scanner)
+- DAZ confirmed ON (all float64 channels flush denormals to 0)
+- APNG overread leaks 1651 heap pointers (V674)
+
+**Current blocker: Info leak (ASLR defeat)**
+
+All Canvas2D APIs return typed JS values -- no raw heap pointer exposed. 10+ dedicated info leak approaches exhausted. Current candidates:
+1. OOB state stack read via save-count mismatch
+2. APNG overread pointer extraction
+
+**Designed but not yet reached:**
+- Forge lineDash Vector in AB for arbitrary R/W
+- vtable hijack or startOfStructureHeap overwrite (Config unfrozen)
+- ROP chain to mprotect(74) for RWX
+
+### Phase 5: Kernel pivot -- BLOCKED
+
+Requires browser code execution from Phase 4. Top kernel candidates:
+- CVE-2026-7270 (execve memmove OOB) -- full exploit published
+- CVE-2026-45251 (poll/select UAF) -- full exploit published
+- thr_create(430) confirmed working (up to 8 threads)
 
 ## Known Constraints
 
 | Constraint | Impact |
 |------------|--------|
-| No JIT | Cannot corrupt JIT code, no RWX pages |
-| No WASM | Cannot use WASM memory for heap layout control |
-| No SharedArrayBuffer | Cannot race between threads |
-| No WebGL | Cannot use GPU buffer tricks |
-| Gigacage disabled | ArrayBuffer backing stores share heap with JSC internals (helps exploitation) |
-| FreeBSD kernel | Different syscall table, different kernel exploit surface |
-| 16KB pages | Page alignment differs from x86 (4KB) |
-| LLInt only | All bytecode execution through interpreter loop |
-| ~500MB usable memory | OOM kills process above this |
-
-## Why Gigacage Being Disabled Matters
-
-On standard WebKit (macOS/Linux), Gigacage isolates ArrayBuffer backing stores into a separate virtual address region. This prevents JSC heap corruption from reaching ArrayBuffer data and vice versa. On PS5 (FreeBSD), Gigacage is disabled (`GIGACAGE_ENABLED 0`), which means ArrayBuffer backing stores route through the same FastMalloc heap as JSC objects. Any heap corruption primitive that can reach FastMalloc allocations can potentially corrupt ArrayBuffer contents readable from JavaScript.
+| No JIT | No RWX pages, need ROP/JOP chains |
+| No WASM | Cannot use WASM memory for layout control |
+| No SharedArrayBuffer | Cannot race between threads for heap bugs |
+| No WebGL | Cannot use GPU buffer tricks, readPixels leak unreachable |
+| Gigacage disabled | AB shares heap with JSC internals (HELPS exploitation) |
+| IsoHeap OFF | All WebCore objects in same FastMalloc (HELPS exploitation) |
+| Config unfrozen | startOfStructureHeap writable post-exploitation (HELPS) |
+| FreeBSD kernel | Different syscall table, different exploit surface |
+| 16KB pages | Page alignment differs from x86 4KB |
+| LLInt only | All bytecode through interpreter loop |
+| ~1200MB ceiling | WebContent process OOM-killed beyond this |
+| DAZ ON | Float64 channels flush denormals; must use BigUint64Array for raw pointers |

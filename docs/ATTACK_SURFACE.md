@@ -61,26 +61,21 @@ Confirmed via p163 device fingerprint probe.
 - ClonedArguments allocation
 
 ### Audited (Bugs Found)
-- MetadataTable overflow (real bug, BLOCKED by 4.29GB sweep)
-- CSSFontFace UAF (source verified, device test pending)
+- **Canvas getContext() UAF (CVE-2026-43720) -- EXPLOITABLE.** IsoHeap is OFF on PS5 (WTF_MAKE_ISO_ALLOCATED = FastMalloc). Same-type reclaim, AB reclaim, and bidirectional R/W all confirmed on device. Primary exploitation vector. See CONFIRMED_VULNS.md.
+- MetadataTable overflow (real bug, DEAD -- OOM before 38M entries on PS5)
+- CSSFontFace UAF (CVE-2026-43715) -- DoS-only. Timer RELEASE_ASSERT blocks exploitation. Sole 192B occupant.
+- tee() type confusion / private-name inversion -- contained by JS builtin wall
+- TransformStream disconnect (CVE-2026-43705) -- contained by JS builtin wall
 
-### Audit In Progress (Session 10)
-- Font parsers (WOFF2, CFF, OTF, SVG fonts)
-- Image decoders (PNG, JPEG, WebP, GIF)
-- DOM mutation + Custom Elements
-- JSC deep runtime (Map/Set iterator, BigInt, Proxy, generators)
-- SVG processing (filters, use element, animation)
-- XML/DOMParser
-- Worker lifecycle
-- Canvas 2D internals
-- CSS layout engine
-- HTML tokenizer / tree builder
-- WebSocket frame parsing
-- Editing commands (execCommand)
-- Shadow DOM slot assignment
-- Fetch/URL/Compression API
-- CSS animation/transition timing
-- WeakRef/FinalizationRegistry GC timing
+### Audit Complete (No Exploitable Bugs)
+- Font parsers -- loca OOB validated on device, PS5 renderer rejects
+- Image decoders -- all 7 formats tested, truncated PNG loads but no leak
+- DOM mutation + Custom Elements -- post-construction validation blocks double-parent
+- SVG filters -- CheckedUint32, RELEASE_ASSERT, 4096 clamp, NaN-to-empty
+- Canvas 2D internals -- IsoHeap OFF discovery led to CVE-43720 exploitation (see above)
+- Worker lifecycle -- confirmed working, no bugs found
+- WebSocket frame parsing -- all binary-to-JS paths zero-init
+- WeakRef/FinalizationRegistry -- no pointer in callback
 
 ### Not Yet Audited
 - Beacon API

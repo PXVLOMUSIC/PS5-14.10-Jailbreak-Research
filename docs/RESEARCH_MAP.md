@@ -5,96 +5,118 @@ This document describes the full exploitation chain from the PS5 browser to the 
 ## Chain Overview
 
 ```
-Stage 1: WebKit memory corruption        <-- current position
-Stage 2: Arbitrary read/write primitive
-Stage 3: Sandbox escape
-Stage 4: Kernel read/write
-Stage 5: Post-exploitation (SMAP bypass via GPU DMA)
+Stage 1: WebKit memory corruption        DONE (CVE-2026-43720)
+Stage 2: Arbitrary read/write primitive   IN PROGRESS (info leak needed)
+Stage 3: Sandbox escape                   Not started
+Stage 4: Kernel read/write                Not started
+Stage 5: Post-exploitation                Not started
 ```
 
-## Stage 1: WebKit Memory Corruption
+## Stage 1: WebKit Memory Corruption -- DONE
 
-The goal of this stage is to trigger a use-after-free or type confusion in WebKit that gives the attacker controlled access to freed or confused C++ object memory.
+**Primary vector: CVE-2026-43720 (Canvas getContext() reentrant UAF)**
 
-### Best Lead: CVE-2026-43715 (CSSFontFace UAF)
+`HTMLCanvasElement::getContext()` reads dictionary options via JS property getters BEFORE setting the new context. A re-entrant getter creates a 2d context; the outer `bitmaprenderer` call then replaces it via `unique_ptr` assignment, freeing the 2d context while its JS wrapper survives.
 
-A use-after-free in `iterateClients()` triggered by a thenable getter on `FontFace.prototype.then`. The getter runs synchronous JavaScript during callback iteration, removes a style element, and forces a layout update. This disconnects a client mid-iteration. The next callback hits the disconnected object.
+IsoHeap is OFF on PS5 (`WTF_MAKE_ISO_ALLOCATED` compiles to standard FastMalloc on FreeBSD/PlayStation). Gigacage also disabled. All WebCore/JSC objects share the same heap.
 
-This is the strongest lead because it is a real C++ UAF with synchronous JavaScript re-entry. It is not blocked by the JS builtin wall that limits the stream-based bugs. Patched upstream, unpatched on PS5 14.10. Device test deployed, awaiting crash confirmation.
+### Confirmed primitives
 
-See [bugs/cssfontface-uaf.md](bugs/cssfontface-uaf.md).
+| Primitive | Probe | Status |
+|-----------|-------|--------|
+| UAF trigger (bitmaprenderer outer + 2d inner) | V589 | CONFIRMED |
+| Same-type reclaim (500x Canvas2D spray) | V573 | CONFIRMED |
+| Bidirectional R/W via alias (all 12 Canvas2D APIs) | V562, V630 | CONFIRMED |
+| Crash oracle (forge m_stateStack, lineWidth reads 8B) | V650-V655 | CONFIRMED |
+| OOB state stack read (save-count mismatch) | -- | Designed, needs device test |
 
-### Novel Findings (no CVE assigned)
+### Secondary / Blocked leads
 
-**tee() Private-Name Inversion.** Poison `Array.prototype[Symbol.iterator]` to yield the same object X twice during `rs.tee()`. The engine writes internal private slots onto X. Confirmed live on device. Blocked by the JS builtin wall -- all operations on the confused object go through `@getByIdDirectPrivate`, which returns `undefined` on fake objects.
+**CVE-2026-43715 (CSSFontFace UAF):** UAF write is real and triggers on device but Timer `RELEASE_ASSERT` crashes the process. CSSFontFace is the sole occupant of the 192-byte size class -- no type confusion target. DoS-only.
 
-See [bugs/private-name-inversion.md](bugs/private-name-inversion.md).
+**tee() private-name inversion:** Writes ReadableStream private slots onto arbitrary objects. Contained by JS builtin wall -- all operations go through `@getByIdDirectPrivate` which returns `undefined` on fake objects. No memory corruption.
 
-**tee() fromObject() Type Confusion.** `InternalReadableStream::fromObject()` wraps any JSObject as an InternalReadableStream with no type check. Attacker substitutes objects via iterator override during `tee()`. Confirmed live on device. Same JS builtin wall limitation.
+**TransformStream disconnect (CVE-2026-43705):** C++ stores attacker streams, JS internals use real ones. Same JS builtin wall. No memory corruption from the disconnect alone.
 
-See [bugs/tee-type-confusion.md](bugs/tee-type-confusion.md).
+### Exhausted surfaces (49 investigated, 44 dead)
 
-### Known CVE (unpatched on PS5 14.10)
+See [DEAD_ENDS.md](DEAD_ENDS.md) for the full list. Key dead ends:
+- MetadataTable overflow: OOM before 38M entries (3.7GB AST needed)
+- All 2023-2024 WebKit CVEs: require JIT tiers unavailable on PS5
+- ClonedArguments butterfly: conservative GC pins cells
+- RAB (all angles): per-element bounds, IDL gate, TOCTOU false positives
+- structuredClone: pool roots objects, mismatch fix present
+- All WSA-2026-0003/0004 CVEs: 39 audited, all dead
 
-**CVE-2026-43705 (TransformStream Disconnect).** Sony's custom TransformStream constructor iterates the JavaScript builtin return array twice. An attacker overrides the iterator on the second pass to substitute their own streams. The C++ side stores the attacker's streams while the JavaScript side uses the real streams. Confirmed live on device. No memory corruption from the disconnect alone.
+## Stage 2: Arbitrary Read/Write Primitive -- IN PROGRESS
 
-See [bugs/transformstream-disconnect.md](bugs/transformstream-disconnect.md).
+The info leak is the current blocker. We have full R/W of typed Canvas2D state fields through the V573 alias, but no path to read a raw heap pointer -- all APIs return typed JS values.
 
-### The JS Builtin Wall
+### Info leak approaches (10+ exhausted)
 
-All InternalReadableStream operations go through `invokeReadableStreamFunction()` into JavaScript builtins. These builtins access object state via `@getByIdDirectPrivate`, which uses an internal SymbolImpl that is invisible to user JavaScript. On a confused object, these reads return `undefined` rather than accessing C++ memory. This wall blocks exploitation of the tee() and TransformStream bugs at the type confusion level.
+1. CanvasStyle variant type confusion (chicken-and-egg)
+2. WTF::Vector stale data after restore (m_size gates reads)
+3. AB zero-init wall (memset(0) on every path)
+4. Freed memory read (destructor nulls m_buffer)
+5. Butterfly overlap (conservative GC)
+6. StructureID confusion (direct pointer, no table)
+7. FinReg/WeakRef timing (no pointer in callback)
+8. DontInitialize AB paths (all return zeros on device)
+9. libpas race CVE-2025-43531 (zero-init blocks data)
+10. Canvas backing store (tryFastCalloc zeros)
 
-### Exhausted Surfaces
+### Current info leak candidate
 
-Over 20 attack surfaces have been audited across 11+ sessions. All were dead-ended. The key dead ends and their root causes:
+**OOB state stack read:** Stale wrapper retains `m_stateStack.m_size = 9` (from 8 saves) while new context has `m_size = 1`. Reading `last()` indexes at `buffer[8]` = 2800 bytes past end of 1-State buffer. Reads adjacent heap as float64. 48-bit x86-64 pointer is exactly representable as IEEE 754 float64.
 
-- **MetadataTable overflow (CVE-2026-64784):** 4.29GB forward sweep exits mapped virtual memory. Parser OOM at 32% of required entries.
-- **All 2023-2024 WebKit CVEs:** Target JIT tiers (DFG, B3, Wasm OMG). None applicable to PS5's LLInt-only execution.
-- **ClonedArguments butterfly UAF:** Conservative GC stack scanning keeps the stale butterfly pointer alive. Cannot free it while `copyToArguments` is on the call stack.
-- **RAB (all angles):** Per-element `inBounds()` checks, IDL converters reject resizable views, TOCTOU variants are false positives.
-- **structuredClone pool mismatch:** Patched on PS5 14.10. The gcBuffer split fix is present.
-- **Font loca OOB:** PS5 renderer validates loca offsets. All OOB reads produce notdef fallback glyphs.
-- **EventTarget UAF:** `isJSExecutionForbidden()` guard blocks the second handler.
-- **sort() detach:** `m_vector` cleared, `m_length` zeroed, all access returns undefined.
-- **Yarr lookbehind:** Fixed in WK-1400 at YarrPattern.cpp:1534-1537.
-- **BYOB streams:** PS5 14.10 lacks `ReadableStream type:bytes` entirely.
+**APNG overread (V674):** 1651 heap pointers leaked via animated PNG processing overread on device.
 
-See [ATTACK_SURFACE.md](ATTACK_SURFACE.md) for the full list.
+### Planned exploitation path (once info leak solved)
 
-## Stage 2: Arbitrary Read/Write Primitive
+1. Leak heap address via OOB state stack read or APNG overread
+2. Forge lineDash `Vector<double>` in AB: `m_buffer = target`, `m_capacity = N`, `m_size = N`
+3. `setLineDash([v1,...,vN])` through alias -- in-place memcpy to target = arbitrary write
+4. `getLineDash()` through alias -- reads from `m_buffer` = arbitrary read
+5. Read JSGlobalObject vtable for binary base, find ROP gadgets
+6. Vtable hijack or `startOfStructureHeap` overwrite (JSC Config is unfrozen on PS5)
+7. ROP chain (x86-64 Zen 2, no PAC, no JIT RWX pages)
 
-This stage has not been reached. It depends on confirming the CVE-2026-43715 crash on device.
+### PS5 exploitation environment advantages
 
-The PS5 exploitation environment is highly favorable for this stage. See [EXPLOITATION_ENVIRONMENT.md](EXPLOITATION_ENVIRONMENT.md) for full details. The key properties:
-
-- **Gigacage is disabled.** ArrayBuffer backing stores share the same FastMalloc heap as JSC objects. No address space isolation.
-- **StructureID has no runtime validation.** A corrupted cell header maps to an arbitrary Structure pointer within 128MB, producing type confusion with no runtime check.
-- **Security assertions are compiled out.** `ASSERT_WITH_SECURITY_IMPLICATION` is a no-op on PS5 release builds.
-- **Freed blocks stay mapped.** Heap grooming can replace freed objects with attacker-controlled data.
-
-The planned path: UAF on CSSFontSelector or CSSSegmentedFontFace, heap grooming to replace the freed object with an ArrayBuffer backing store (same heap, same size class), corrupt the StructureID in a JSCell header, trigger type confusion, and build `addrof` and `fakeobj` primitives. A fake JSArray with a controlled butterfly pointer provides arbitrary read/write.
+- **Gigacage disabled:** AB backing stores share heap with JSC/WebCore objects
+- **IsoHeap OFF:** `WTF_MAKE_ISO_ALLOCATED` = standard FastMalloc on PlayStation
+- **StructureID no validation:** Pure mask+offset decode, no bounds check in release
+- **Config unfrozen:** `disableFreezingForTesting()` -- `startOfStructureHeap` writable
+- **Security assertions compiled out:** `ASSERT_WITH_SECURITY_IMPLICATION` = no-op
+- **Freed blocks stay mapped:** Virtual memory persists, no in-band freelist
 
 ## Stage 3: Sandbox Escape
 
-This stage has not been started. It requires the arbitrary read/write from Stage 2.
+Not started. Requires arbitrary R/W from Stage 2.
 
 PS5 uses FreeBSD jails for process sandboxing. Candidates:
-
-- **CVE-2025-15547 / CVE-2025-15576:** FreeBSD jail escape vulnerabilities. Depend on whether nullfs is available on PS5.
-- **Sony syscall bugs:** sys_532 (OOB, verified on 13.60), sys_558 (unchecked index), sys_536 (negative count). All need validation on firmware 14.10.
-
-The sandbox boundaries (which syscalls are available, jail configuration) have not been mapped yet.
+- **CVE-2025-15547 / CVE-2025-15576:** FreeBSD jail escape. Depends on nullfs availability.
+- **Sony syscalls:** sys_532 (OOB, verified 13.60), sys_558 (unchecked index), sys_536 (negative count). Need 14.10 validation.
+- **SCM_RIGHTS fd passing:** Potential sandbox boundary crossing via Unix domain sockets.
 
 ## Stage 4: Kernel Read/Write
 
-This stage has not been started. It requires sandbox escape from Stage 3. Public exploits exist for the top candidates.
+Not started. Requires sandbox escape from Stage 3. See [KERNEL_AUDIT.md](KERNEL_AUDIT.md).
 
-See [KERNEL_AUDIT.md](KERNEL_AUDIT.md) for the full audit.
-
-- **CVE-2026-7270 (execve memmove OOB):** Tier 1. Full exploit published. FreeBSD 11+ confirmed.
-- **CVE-2026-45251 (poll/select UAF):** Tier 1. Full exploit published. All supported FreeBSD versions.
-- **CVE-2024-43102 (UMTX UAF, CVSS 10):** Tier 1. Exploited on older PS5 firmware (1.00-7.61). Likely patched on 14.10.
+Top candidates:
+- **CVE-2026-7270 (execve memmove OOB):** Full exploit published. FreeBSD 11+.
+- **CVE-2026-45251 (poll/select UAF):** Full exploit published. All supported FreeBSD.
+- **CVE-2024-43102 (UMTX):** Exploited on FW 1.00-7.61. SHM stubbed on 14.10 -- likely dead.
 
 ## Stage 5: Post-Exploitation
 
-GPU DMA for SMAP bypass, providing full system access. This stage has not been researched yet.
+GPU DMA for SMAP bypass, kernel R/W to full system access. Post-exploit framework (flatz SDK v0.45) has 14.10 kernel offsets for SECURITY_FLAGS, ALLPROC, ROOTVNODE.
+
+Recommended chain:
+```
+WebKit code execution
+    -> userland arb R/W
+    -> CVE-2026-7270 or CVE-2026-45251
+    -> kernel R/W
+    -> GPU DMA for SMAP bypass
+```
