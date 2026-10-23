@@ -218,6 +218,14 @@ Sony removed shared memory subsystem on firmware 14.10.
 
 The `USHMF_LINKED` single flag check is impossible because the SHM syscalls are stubbed. PS5Dev/PS5-UMTX-Jailbreak covers FW up to 13.60 only. Our probe 10 used the wrong syscall number, confirming the stub.
 
+### CVE-2026-64783 — DataListButtonElement UAF — DEAD: No Datalist on PS5
+
+**Bug 313521.** `DataListButtonElement::defaultEventHandler()` holds raw `DataListButtonOwner& m_owner`. Changing `<input>` type inside click handler frees `TextFieldInputType` while event dispatch is in progress. Fixed in commit `be08720593` (WeakPtr + removeOwner).
+
+**Why dead:** Requires `<input type="text" list="...">` with a visible datalist dropdown button, plus user click interaction on that button. PS5 Guide browser has no datalist UI. Even if it did, exploitation requires TextFieldInputType-sized heap spray and user interaction timing — not viable from automated JS.
+
+**WSA-2026-0005 advisory, CVSS 8.8.** Fixed in Safari 26.6 / WebKitGTK 2.52.6.
+
 ### Kernel Probes (CVE-2026-49418, CVE-2026-7270, poll/select UAF) — BLOCKED
 
 All require code execution outside browser sandbox. Unreachable from JavaScript.
@@ -240,8 +248,8 @@ None are triggerable from the browser. Mostly UI/viewport tests. The postMessage
 | Streams API | 4 | 4 | 0 |
 | RAB | 3 | 2 | 1 |
 | DOM / Rendering | 10 | 7 | 3 |
-| CVE Audit | 4 | 4 | 0 |
+| CVE Audit | 5 | 5 | 0 |
 | Kernel / Syscall | 3 | 3 | 0 |
-| **Total** | **34** | **30** | **4** |
+| **Total** | **35** | **31** | **4** |
 
 All 34 investigated vectors are either confirmed dead (vulnerability does not exist, is patched, or is unexploitable on this platform) or confirmed safe (no vulnerability exists).
