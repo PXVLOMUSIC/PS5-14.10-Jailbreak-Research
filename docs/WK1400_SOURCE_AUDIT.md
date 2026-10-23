@@ -86,7 +86,7 @@ PS5 renderer validates loca table offsets. All OOB attempts produce notdef fallb
 All 39 CVEs from WebKit Security Advisories WSA-2026-0003 and WSA-2026-0004 were audited against PS5 capabilities. **All are dead on PS5** due to requiring one or more of:
 
 - WebAssembly (not available)
-- JIT compilation — DFG, FTL, or B3 (not available, LLInt-only)
+- JIT compilation  - DFG, FTL, or B3 (not available, LLInt-only)
 - WebGL / WebGL2 (not available)
 - User-interaction APIs (not available in PS5 browser context)
 

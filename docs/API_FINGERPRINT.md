@@ -22,7 +22,7 @@ Engine: WebKit-1400 / Safari 17.0 / AppleWebKit 605.1.15
 - **Response.clone** (body correctly duplicated)
 
 ### Crypto
-- **crypto.subtle** — ECDH P-256, AES-GCM, AES-CBC (device-confirmed key operations)
+- **crypto.subtle**  - ECDH P-256, AES-GCM, AES-CBC (device-confirmed key operations)
 
 ### Streams
 - **ReadableStream** (default reader only, NOT BYOB/type:bytes)
@@ -74,7 +74,7 @@ Engine: WebKit-1400 / Safari 17.0 / AppleWebKit 605.1.15
 ## JSC Engine Characteristics (Device-Confirmed)
 
 ### Execution
-- **LLInt only** — no DFG, FTL, or B3 JIT tiers
+- **LLInt only**  - no DFG, FTL, or B3 JIT tiers
 - All code runs in the Low-Level Interpreter
 - No speculative optimization, no OSR, no watchpoints for JIT
 

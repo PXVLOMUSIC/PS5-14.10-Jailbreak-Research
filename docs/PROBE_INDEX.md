@@ -122,7 +122,7 @@ All probes tested on PS5 14.10. Results from device beacon logs.
 | p170 | CSSFontFace UAF via WOFF2 font cycling | Network errors (PS5 rejects WOFF2) |
 | p175 | CSSFontFace UAF via TTF from ArrayBuffer | Deployed, awaiting results |
 
-## Canvas UAF Probes — CVE-2026-43720 (probes/canvas-uaf/ + probes/1410-guide/)
+## Canvas UAF Probes  - CVE-2026-43720 (probes/canvas-uaf/ + probes/1410-guide/)
 
 | Probe | Purpose | Device Result |
 |-------|---------|---------------|
@@ -142,16 +142,16 @@ All probes tested on PS5 14.10. Results from device beacon logs.
 | v597 | CSS filter uninit + stale heap | Ready, not yet tested |
 | v600 | Save-count mismatch OOB read | Deployed |
 | v601 | State buffer heap scan | Deployed |
-| v610 | Cross-context getContext UAF (2d→WebGL→2d) | WebGL absent — DEAD |
+| v610 | Cross-context getContext UAF (2d→WebGL→2d) | WebGL absent  - DEAD |
 | v611 | IntersectionObserver UAF probe | Narrow window, DEAD |
-| v612 | Canvas backing store uninit | tryFastCalloc zeros — DEAD |
+| v612 | Canvas backing store uninit | tryFastCalloc zeros  - DEAD |
 | v613 | Freed memory zero-alloc read | CRASHED (destructor nulls m_buffer) |
 | v614 | AB spray discriminator | Deployed |
 | v620 | Portablelle state buffer leak (save→free→AB) | CRASHED at lineWidth read |
 | v621 | Portablelle corrected offsets | Redirects to V627 |
 | v625 | Two-context alias + freed read | Deployed |
 | v627 | Groomed Portablelle (768B+4608B groom + flush) | CRASHED at Phase 4 |
-| v630 | **Full 12-API alias diagnostic** | **ALL 12 APIs PASS** — alias at idx=11 |
+| v630 | **Full 12-API alias diagnostic** | **ALL 12 APIs PASS**  - alias at idx=11 |
 | v631 | AB zero-init + gradient + Blob/XHR uninit paths | Not deployed |
 | v632 | Two-stage: alias + zero-alloc freed reads | Stage 1 pass, Stage 2 pending |
 | v633 | Variant type confusion probe | Deployed |

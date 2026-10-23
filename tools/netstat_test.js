@@ -72,7 +72,7 @@ function createMockApi(options = {}) {
         const b1 = listPtr.low + IF_RECORD_SIZE;
         listPtr.buffer.write("wlan0\0", b1, "utf8");
         listPtr.buffer.writeUInt32LE(1, b1 + 0x20); // UP
-        // IP: 192.168.1.133
+        // IP: 10.0.0.100
         const wlanIp = [192, 168, 1, 133];
         for (let i = 0; i < 4; i++) listPtr.buffer.writeUInt8(wlanIp[i], b1 + 40 + i);
         // Netmask: 255.255.255.0
@@ -200,7 +200,7 @@ async function run() {
     const data = JSON.parse(api.logs[0].msg);
     assert.equal(data.interfaces.length, 2);
     assert.equal(data.interfaces[1].name, "wlan0");
-    assert.equal(data.interfaces[1].ip, "192.168.1.133");
+    assert.equal(data.interfaces[1].ip, "10.0.0.100");
     assert.equal(data.interfaces[1].mac, "1c:98:c1:98:04:aa");
     assert.equal(data.open_ports.length, 3);
     assert.equal(data.open_ports[0].port, 9021);

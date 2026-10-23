@@ -144,7 +144,7 @@ function createMockApi(options = {}) {
       if (num === 0x07d) {
         const [buf, count] = args;
         if (buf === 0) return ok(1); // count probe
-        // Populate one interface: eth0 (192.168.1.133)
+        // Populate one interface: eth0 (10.0.0.100)
         const RECORD = 0x3c0;
         buf.buffer.fill(0, buf.low, buf.low + RECORD * count);
         buf.buffer.write("eth0", buf.low, "utf8");
@@ -242,7 +242,7 @@ function createMockApi(options = {}) {
   assert(logs.some((l) => l.includes("UID / EUID:     0 (root) / 0")));
   assert(logs.some((l) => l.includes("Sandbox:        escaped (unsandboxed)")));
   assert(logs.some((l) => l.includes("libkernel:      0x880010000")));
-  assert(logs.some((l) => l.includes("eth0:        192.168.1.133")));
+  assert(logs.some((l) => l.includes("eth0:        10.0.0.100")));
 
   // Directory listing checks for /
   assert(logs.some((l) => l.includes("=== Directory Listing: / ===")));
