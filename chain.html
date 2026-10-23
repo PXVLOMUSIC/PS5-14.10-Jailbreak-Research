@@ -1,0 +1,604 @@
+<title>PS5 Escalation Chain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap">
+
+<style>
+/* Dark cyberpunk terminal — HIGH CONTRAST / BIG TEXT edition */
+:root {
+  --bg: #050508;
+  --fg: #ffffff;
+  --cyan: #00ffee;
+  --magenta: #ff55c8;
+  --green: #00ff66;
+  --yellow: #ffd75e;
+  --red: #ff4466;
+  --dim: #8899bb;
+  --line: #2a2a44;
+  --glow-cyan: 0 0 8px #00ffee, 0 0 20px #00ffee44;
+  --glow-green: 0 0 8px #00ff66, 0 0 20px #00ff6644;
+  --glow-yellow: 0 0 8px #ffd75e, 0 0 20px #ffd75e44;
+  --glow-red: 0 0 8px #ff4466, 0 0 20px #ff446644;
+  --glow-magenta: 0 0 8px #ff55c8, 0 0 20px #ff55c844;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg); /* bright white body text */
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 16px; /* minimum size, enforced everywhere below too */
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* scanline overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 238, 0.015) 2px,
+    rgba(0, 255, 238, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* horizontal scan beam */
+@keyframes scanBeam {
+  0% { top: -2px; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100vh; opacity: 0; }
+}
+body::before {
+  content: "";
+  position: fixed;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 15px var(--cyan), 0 0 30px var(--cyan);
+  z-index: 101;
+  animation: scanBeam 4s linear infinite;
+  pointer-events: none;
+}
+
+.wrapper {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-block: 2rem 4rem;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(2.2rem, 8vw, 3.8rem);
+  color: var(--cyan); /* bright cyan heading */
+  text-shadow: var(--glow-cyan), 0 0 40px #00ffee33;
+  letter-spacing: 0.08em;
+  margin: 0;
+  line-height: 1.1;
+  text-wrap: balance;
+  animation: titlePulse 3s ease-in-out infinite;
+}
+@keyframes titlePulse {
+  0%, 100% { text-shadow: var(--glow-cyan), 0 0 40px #00ffee33; }
+  50% { text-shadow: 0 0 12px #00ffee, 0 0 30px #00ffee88, 0 0 60px #00ffee44; }
+}
+
+.subtitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 17px;
+  color: var(--cyan); /* bright cyan heading */
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-top: 0.6rem;
+}
+.subtitle span { color: var(--fg); }
+
+.cve {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--magenta);
+  border: 1px solid var(--magenta);
+  padding: 0.3em 1em;
+  letter-spacing: 0.12em;
+  text-shadow: var(--glow-magenta);
+  box-shadow: inset 0 0 12px #ff55c822, var(--glow-magenta);
+  animation: cvePulse 2s ease-in-out infinite alternate;
+}
+@keyframes cvePulse {
+  0% { box-shadow: inset 0 0 12px #ff55c822, 0 0 6px #ff55c8; }
+  100% { box-shadow: inset 0 0 20px #ff55c844, 0 0 14px #ff55c8, 0 0 30px #ff55c844; }
+}
+
+.handle {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 16px;
+  color: var(--cyan);
+  opacity: 0.9;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.tag {
+  font-size: 16px;
+  color: #b9c6ee;
+  border: 1px solid var(--line);
+  padding: 0.2em 0.6em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── VERTICAL CHAIN ── */
+.chain {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* the glowing spine */
+.chain::before {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--green) 0%,
+    var(--green) 38%,
+    var(--yellow) 42%,
+    var(--dim) 55%,
+    var(--dim) 100%
+  );
+  box-shadow: 0 0 6px #00ff6688, 0 0 12px #00ff6633;
+}
+
+/* energy pulse along the spine */
+@keyframes spinePulse {
+  0% { top: 0; opacity: 0; }
+  5% { opacity: 1; }
+  40% { opacity: 1; }
+  45% { opacity: 0.3; }
+  100% { top: calc(100% - 8px); opacity: 0; }
+}
+.chain::after {
+  content: "";
+  position: absolute;
+  left: 17px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan), 0 0 20px var(--cyan);
+  animation: spinePulse 3s ease-in-out infinite;
+  z-index: 2;
+}
+
+/* ── STAGE NODE ── */
+.stage {
+  position: relative;
+  padding-left: 50px;
+  padding-block: 1rem;
+  min-height: 4rem;
+}
+
+/* dot on spine */
+.stage::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 1.3rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--dim);
+  background: var(--bg);
+  z-index: 3;
+}
+.stage.confirmed::before {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: var(--glow-green);
+}
+.stage.active::before {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: var(--glow-yellow);
+  animation: activeDot 1.5s ease-in-out infinite;
+}
+@keyframes activeDot {
+  0%, 100% { box-shadow: 0 0 6px var(--yellow); transform: scale(1); }
+  50% { box-shadow: 0 0 14px var(--yellow), 0 0 28px #ffd75e44; transform: scale(1.3); }
+}
+.stage.pending::before {
+  border-color: var(--dim);
+  background: transparent;
+}
+.stage.target::before {
+  border-color: var(--red);
+  background: var(--red);
+  box-shadow: var(--glow-red);
+  animation: targetDot 2s ease-in-out infinite;
+}
+@keyframes targetDot {
+  0%, 100% { box-shadow: 0 0 6px var(--red); }
+  50% { box-shadow: 0 0 16px var(--red), 0 0 32px #ff446644; }
+}
+
+/* card */
+.card {
+  border: 1px solid var(--line);
+  padding: 1rem 1.2rem;
+  background: #0a0a14;
+  position: relative;
+  overflow: hidden;
+}
+.stage.confirmed .card { border-color: #00ff6655; }
+.stage.active .card {
+  border-color: #ffd75e88;
+  box-shadow: 0 0 15px #ffd75e22;
+}
+.stage.target .card { border-color: #ff446655; }
+
+/* active card glitch bar */
+.stage.active .card::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--yellow), var(--magenta), transparent);
+  animation: glitchBar 2s linear infinite;
+}
+@keyframes glitchBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.stage-num {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+  color: var(--cyan); /* bright cyan heading */
+}
+.stage-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+  color: var(--cyan); /* bright cyan heading */
+  text-shadow: 0 0 6px #00ffee44;
+}
+.stage.confirmed .stage-title {
+  color: var(--cyan);
+  text-shadow: 0 0 6px #00ffee44;
+}
+.stage.active .stage-title {
+  color: var(--cyan);
+  text-shadow: 0 0 8px #00ffee88;
+  animation: titleFlicker 0.1s infinite alternate;
+}
+@keyframes titleFlicker {
+  0% { opacity: 1; }
+  100% { opacity: 0.94; }
+}
+.stage.pending .stage-title { color: var(--cyan); }
+.stage.target .stage-title {
+  color: var(--cyan);
+  text-shadow: 0 0 8px #00ffee44;
+}
+
+.stage-desc {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #ffffff; /* bright white body text */
+}
+
+/* progress bar */
+.bar-wrap {
+  margin-top: 0.6rem;
+  height: 6px;
+  background: var(--line);
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  transition: width 1s ease;
+}
+.stage.confirmed .bar-fill {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  width: 100%;
+  animation: barGlow 2s ease-in-out infinite alternate;
+}
+@keyframes barGlow {
+  0% { box-shadow: 0 0 4px var(--green); }
+  100% { box-shadow: 0 0 10px var(--green), 0 0 20px #00ff6633; }
+}
+.stage.active .bar-fill {
+  background: linear-gradient(90deg, var(--yellow), var(--magenta));
+  animation: activeBar 2s ease-in-out infinite alternate;
+}
+@keyframes activeBar {
+  0% { box-shadow: 0 0 4px var(--yellow); }
+  100% { box-shadow: 0 0 12px var(--yellow), 0 0 24px #ffd75e33; }
+}
+.stage.pending .bar-fill { background: var(--dim); }
+.stage.target .bar-fill {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+
+.pct {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 17px;
+  margin-top: 0.3rem;
+  text-align: right;
+  color: #ffffff;
+}
+.stage.confirmed .pct { color: var(--green); }
+.stage.active .pct { color: var(--yellow); }
+.stage.pending .pct { color: #9fb4dd; }
+
+/* YOU ARE HERE marker */
+.here-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--yellow);
+  margin-top: 0.5rem;
+  animation: hereBlink 1s step-end infinite;
+  letter-spacing: 0.1em;
+}
+@keyframes hereBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.here-marker::before {
+  content: "▸▸";
+  color: var(--magenta);
+  text-shadow: var(--glow-magenta);
+}
+
+/* status badge */
+.badge {
+  display: inline-block;
+  font-size: 16px;
+  padding: 0.1em 0.4em;
+  border: 1px solid;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.badge-ok { color: var(--green); border-color: var(--green); }
+.badge-block { color: var(--yellow); border-color: var(--yellow); }
+.badge-wait { color: #9fb4dd; border-color: #9fb4dd; }
+
+/* bottom status panel */
+.status-panel {
+  margin-top: 2rem;
+  border: 1px solid var(--line);
+  padding: 1rem;
+  background: #0a0a14;
+}
+.status-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 19px;
+  color: var(--cyan); /* bright cyan heading */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  text-shadow: 0 0 4px #00ffee44;
+}
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #14142a;
+}
+.status-row:last-child { border-bottom: none; }
+.status-label { color: #b9c6ee; }
+.status-val { color: #ffffff; }
+.status-val.hot { color: var(--yellow); }
+.status-val.ok { color: var(--green); }
+.status-val.dead { color: var(--red); text-decoration: line-through; }
+
+/* flicker animation for whole page on load */
+@keyframes bootFlicker {
+  0% { opacity: 0; }
+  5% { opacity: 0.8; }
+  10% { opacity: 0.2; }
+  15% { opacity: 1; }
+  20% { opacity: 0.6; }
+  30% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.wrapper { animation: bootFlicker 0.8s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+
+<div class="wrapper">
+  <header class="header">
+    <h1 class="title">PS5 14.10</h1>
+    <div class="subtitle">Jailbreak Escalation Chain</div>
+    <div class="cve">CVE-2026-43720</div>
+    <span class="handle">@Arn0Stride7</span>
+    <div class="tags">
+      <span class="tag">FreeBSD 11</span>
+      <span class="tag">AMD Zen2</span>
+      <span class="tag">No JIT</span>
+      <span class="tag">No PAC</span>
+      <span class="tag">Gigacage OFF</span>
+      <span class="tag">ASLR ON</span>
+    </div>
+  </header>
+
+  <div class="chain">
+
+    <div class="stage confirmed">
+      <div class="card">
+        <div class="stage-num">Stage 01</div>
+        <div class="stage-title">UAF Trigger <span class="badge badge-ok">confirmed</span></div>
+        <div class="stage-desc">CVE-2026-43720 — canvas getContext reentrant UAF<br>CONFIRMED 100%</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:100%"></div></div>
+        <div class="pct">100%</div>
+      </div>
+    </div>
+
+    <div class="stage confirmed">
+      <div class="card">
+        <div class="stage-num">Stage 02</div>
+        <div class="stage-title">Heap Reclaim <span class="badge badge-ok">confirmed</span></div>
+        <div class="stage-desc">AB(768) spray reclaims freed Context2D slot<br>CONFIRMED 100%</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:100%"></div></div>
+        <div class="pct">100%</div>
+      </div>
+    </div>
+
+    <div class="stage confirmed">
+      <div class="card">
+        <div class="stage-num">Stage 03</div>
+        <div class="stage-title">Alias R/W <span class="badge badge-ok">confirmed</span></div>
+        <div class="stage-desc">lineWidth / miterLimit / setLineDash through aliased context<br>CONFIRMED 100%</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:100%"></div></div>
+        <div class="pct">100%</div>
+      </div>
+    </div>
+
+    <div class="stage active">
+      <div class="card">
+        <div class="stage-num">Stage 04</div>
+        <div class="stage-title">Crash Oracle <span class="badge badge-block">running</span></div>
+        <div class="stage-desc">Forge m_stateStack to probe addresses<br>V655 binary subdivision scanner RUNNING</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:80%"></div></div>
+        <div class="pct">80%</div>
+      </div>
+    </div>
+
+    <div class="stage active">
+      <div class="card">
+        <div class="stage-num">Stage 05</div>
+        <div class="stage-title">Info Leak <span class="badge badge-block">in progress</span></div>
+        <div class="stage-desc">Need heap pointer for ASLR defeat<br>Scanning 0x310000000-0x311800000</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:40%"></div></div>
+        <div class="pct">40%</div>
+        <div class="here-marker">YOU ARE HERE</div>
+      </div>
+    </div>
+
+    <div class="stage pending">
+      <div class="card">
+        <div class="stage-num">Stage 06</div>
+        <div class="stage-title">Arb R/W <span class="badge badge-wait">ready — needs leak</span></div>
+        <div class="stage-desc">setLineDash copy-assign for arbitrary write<br>READY, waiting on info leak</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:0%"></div></div>
+        <div class="pct">0%</div>
+      </div>
+    </div>
+
+    <div class="stage pending">
+      <div class="card">
+        <div class="stage-num">Stage 07</div>
+        <div class="stage-title">Code Exec</div>
+        <div class="stage-desc">Vtable hijack plus ROP</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:0%"></div></div>
+        <div class="pct">0%</div>
+      </div>
+    </div>
+
+    <div class="stage target">
+      <div class="card">
+        <div class="stage-num">Stage 08</div>
+        <div class="stage-title">Kernel</div>
+        <div class="stage-desc">FreeBSD 11 escalation</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:0%"></div></div>
+        <div class="pct">0%</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status-panel">
+    <div class="status-title">System Status</div>
+    <div class="status-row">
+      <span class="status-label">Firmware</span>
+      <span class="status-val">14.10 (FreeBSD 11.x)</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Current Stage</span>
+      <span class="status-val hot">STAGE 5 — Info Leak (40%)</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Bottleneck</span>
+      <span class="status-val hot">Heap pointer for ASLR defeat</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">V655 Scanner</span>
+      <span class="status-val ok">RUNNING — binary subdivision</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Scan Range</span>
+      <span class="status-val">0x310000000-0x311800000</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">UAF Trigger</span>
+      <span class="status-val ok">CONFIRMED 100%</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Alias R/W</span>
+      <span class="status-val ok">CONFIRMED 100%</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Agents Active</span>
+      <span class="status-val hot">6× DeepSeek + 4× Opus</span>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.bar-fill').forEach(function(bar) {
+  var w = bar.style.width;
+  bar.style.width = '0%';
+  setTimeout(function() { bar.style.width = w; }, 200 + Math.random() * 600);
+});
+</script>

@@ -1,0 +1,884 @@
+dsh: reasoning:
+Let me start by exploring the working directory and understanding the files involved.
+
+The task:
+1. Parse host-beacons.log, filter paths /beacon/V135W-*, dedupe POSTs (sendBeacon + keepalive fetch both fire). Summarize per endpoint: V135W-L, W1-PARAM-20M-COMPILE, W2-NOPARAM-20M-COMPILE, W3-PARAM-20M-CALL, W4-NOPARAM-20M-CALL, W5-NOPARAM-15M-CALL, W6-TEXTDEC-22M, V135W-DONE. Report each test's final outcome payload JSON: survived, compileMs, crashed, errorMsg/errorLine, totalTime.
+
+2. Read p135-overflow-worker.js. Verify hypothesis about bare 'return;' statements in template literals at script top-level scope inside catch blocks (approx lines 145, 148, 176, 203). Workers parse script as script → SyntaxError "Return statements are only valid inside functions" at errorLine 25/19/18. Match errorLine numbers against template line offsets. Confirm W6_CODE has no bare top-level return.
+
+3. Result interpretation.
+
+4. Confirm ZERO V136* beacons.
+
+5. Output minimal patch text.
+
+6. Handoff list.
+
+Write the report to p135-beacon-check-dsh-report.md, then print compact summary.
+
+This is analysis only — do NOT modify files except writing the report. Let me start.
+
+Let me set up a todo list and explore.
+dsh: reasoning:
+The directory exists with the files. Now let me set up a todo list and start with the beacon log parsing.
+dsh: reasoning:
+Let me first look at the beacon log for V135W entries.
+dsh: reasoning:
+60 lines for V135W, 0 for V136. Let me get the full picture of all 60 lines, dedupe per path+body, and look at each endpoint. Let me write a small script to parse the JSON lines, dedupe identical path+body pairs, and summarize.
+dsh: reasoning:
+The beacon log is fully parsed. Let me record the summary:
+
+- V135W-L: "probe135-start" (twice: 05:33:10 and 05:33:15 — interesting, probe restarted, or the two-page load; first W1 run happened twice: at 05:33:10 with compileMs=3483 and 05:33:15 with compileMs=3455. So W1 ran twice. The "final outcome" is the second one: ms 3455, survived totalTime 3460.)
+
+Wait, the task says "Report each test's final outcome payload JSON: survived? compileMs? crashed? errorMsg/errorLine? totalTime?" — the mission asks for final outcome. W1 has two runs: first at 05:33:10 (3483ms, totalTime 3500), second at 05:33:15 (3455ms, totalTime 3460). The task states "W1 (param, 20M, compile-only) survived ms=3455" — matches the second run. So report both runs but the final one is ms=3455.
+
+Also V135W-L appears twice: 05:33:10 and 05:33:15 — probe135-start. Possibly the loader re-ran probe135 (first attempt crashed the webview? Or user re-pressed). Actually interesting: W1 ran twice, and V135W-L appeared twice. W2 through W6 each ran once. Let me note this.
+
+Per-endpoint dedupe summary:
+- V135W-L: 2 unique beacons (both "probe135-start"), at 05:33:10 and 05:33:15 — indicates the probe page was loaded/started twice.
+- W1-PARAM-20M-COMPILE: ran twice. Run 1: start 05:33:10, compileDone ms=3483, final survived=true compileMs=3483 totalTime=3500. Run 2: start 05:33:15, compileDone ms=3455, survived=true compileMs=3455 totalTime=3460. Final = ms 3455.
+- W2-NOPARAM-20M-COMPILE: survived=true, compileMs=3439, noParam=true, totalTime=3443.
+- W3-PARAM-20M-CALL: crashed=true, errorMsg "SyntaxError: Return statements are only valid inside functions.", errorLine=25, totalTime=7.
+- W4-NOPARAM-20M-CALL: crashed=true, same SyntaxError, errorLine=19, totalTime=4.
+- W5-NOPARAM-15M-CALL: crashed=true, same SyntaxError, errorLine=18, totalTime=3.
+- W6-TEXTDEC-22M: survived=true, bufferFilled len=90000000 ms=8006, decoded srcLen=90000000 ms=33, compiled ms=3619, workerResult {compiled:true, n:22500000, fillMs:8006, decodeMs:33, compileMs:3619}, survived=true, totalTime=11663.
+- V135W-DONE: "all-6" at 05:34:04.
+
+Also note W3/W4/W5 have no PROG beacons — consistent with the worker script never executing (syntax error at parse time). They only have PRE ("starting") then final crashed beacon.
+
+Now, task 2: read p135-overflow-worker.js and verify the hypothesis. Lines ~145, 148, 176, 203 contain bare 'return;' at top-level script scope inside catch blocks. Workers parse script as script → SyntaxError at errorLine 25/19/18 matching template line offsets.
+
+Let me read the file.
+dsh: reasoning:
+The AGENTS.md instructions are relevant: don't send anything to live hardware (I'm not — this is pure local log/source analysis). Redaction: the report may contain LAN IPs — I should redact the origin IP in the report. Actually, the report is local, not outbound. But being careful: the beacon rows contain "origin": "192.168.77.10" — a LAN IP. The report file is written locally in the workspace, which is fine per rules (redaction applies to outbound prompts). Still, for hygiene, I could note the origin as `<PS5-LAN>` in the report. The instruction says no outbound prompt may contain LAN IPs. Writing a local report is not an outbound prompt. But the handoff list is for "a second model (GLM running in parallel)" — that could become an outbound dispatch! So the handoff list in the report should NOT contain the LAN IP. I'll use placeholder notation in the report for origin IP: `192.168.x.x` or `<PS5-LAN>`. Good practice.
+
+Also rule 4: history is append-only — I must not modify host-beacons.log or p135-overflow-worker.js. Only write a NEW report file. Good.
+
+Now, verify the hypothesis with precise line offsets.
+
+The file p135-overflow-worker.js:
+
+- W1_CODE template starts at line 86 (backtick line). W1_CODE content begins at file line 87.
+- W2_CODE template starts at line 103; content begins at 104.
+- W3_CODE template starts at line 121; content begins at 122.
+- W4_CODE template starts at line 158; content begins at 159.
+- W5_CODE template starts at line 186; content begins at 187.
+- W6_CODE template starts at line 213; content begins at 214.
+
+Now for W3_CODE: content line 1 = file line 122. The bare 'return;' statements are at file lines 145 and 148.
+
+File line 145 → content line 145 - 121 = 24.
+File line 148 → content line 148 - 121 = 27.
+
+Hmm, the beacon says errorLine=25 for W3. Let me count more carefully.
+
+W3_CODE content:
+- file line 122: `self.postMessage({type:'progress',phase:'start',value:Date.now()});` → content line 1
+- 123: `try{` → 2
+- 124: `  var t0=Date.now();` → 3
+- 125: `  var src='a();'.repeat(20000000);` → 4
+- 126: `  self.postMessage({type:'progress',phase:'stringDone',...` → 5
+- 127: `  var t1=Date.now();` → 6
+- 128: `  var fn=new Function('a',src);` → 7
+- 129: `  var compileMs=Date.now()-t1;` → 8
+- 130: `  self.postMessage({type:'progress',phase:'compileDone',...` → 9
+- 131: `  src=null;` → 10
+- 132: `  // Free memory before call` → 11
+- 133: `  for(var g=0;g<10;g++){...}` → 12
+- 134: `  self.postMessage({type:'progress',phase:'calling',value:'now'});` → 13
+- 135: `  // CALL IT — ...` → 14
+- 136: `  var callCount=0;` → 15
+- 137: `  try{` → 16
+- 138: `    fn(function(){` → 17
+- 139: `      callCount++;` → 18
+- 140: `      if(callCount>2) throw new Error('STOP');` → 19
+- 141: `    });` → 20
+- 142: `  }catch(e){` → 21
+- 143: `    if(e.message==='STOP'){` → 22
+- 144: `      self.postMessage({type:'done',...});` → 23
+- 145: `      return;` → 24
+- 146: `    }` → 25
+- 147: `    self.postMessage({...});` → 26
+- 148: `    return;` → 27
+- 149: `  }` → 28
+
+Hmm, so the first return is at content line 24, second at 27. But the beacon reported errorLine=25. Interesting. Wait — WebKit's error line numbers... Let me think.
+
+Hmm, the reported errorLine=25. If the first bare return is at content line 24, why does WebKit report 25? Possibilities:
+
+1. WebKit's parser reports the line AFTER the token — the `return` statement's line as detected at the semicolon or end of the statement? Actually in WebKit's JSParser, the error for a top-level return is reported at the position where it detects it. Let me check WebKit behavior: `JSParser::parseReturnStatement` — for `return` at top level, syntaxError(ASCIILiteral("Return statements are only valid inside functions")) at the token's location.
+
+Actually, another subtlety: `new Function('a',src)` — the Function constructor wraps the body in a function. But the W3_CODE is the WORKER script itself, not the Function body! The worker code is passed as `new Blob([workerCode])` → Worker(url). The worker parses W3_CODE as a classic script. The bare `return;` at content line 24/27 is top-level in the script → SyntaxError. Right.
+
+So which line does the error report? Let me check actual WebKit: In `Parser<LexerType>::parseReturnStatement`, when scope is global: `failWithMessage("Return statements are only valid inside functions")` — hmm, actually it's a semantic failure reported at the token location... In WebKit's parser, top-level return check: `if (!functionBody && !classFieldInitializerScope...) syntaxError(...)`. The error location is typically the token start.
+
+Let me not rely on memory. Let me actually compute what the line numbers mean in the reported error. Reported W3 errorLine=25. Content line 24 = `      return;` (file line 145). Content line 25 = `    }` (file line 146).
+
+Hmm — one possibility: the worker's `new Function(src)` — no wait, the error is in the worker script itself.
+
+Wait — actually, is the error maybe reported from the `Function` constructor compilation? No — the Function body is `'a();'.repeat(20000000)`, which has no returns. The error must be the worker script parse.
+
+Alternative: maybe WebKit reports the line of the `}` following the return, i.e., the error is detected at end of the statement including the line terminator? Or maybe line numbering includes something else. Let me check: maybe the message is reported at the point of the closing brace of the block? In WebKit, `parseStatement`... Actually let me check the exact WebKit code (JSParser.cpp, parseReturnStatement):
+
+```cpp
+template <typename LexerType>
+template <class TreeBuilder> TreeStatement Parser<LexerType>::parseReturnStatement(TreeBuilder& context)
+{
+    ...
+    if (!m_allowSuperCall... 
+```
+
+Hmm, in newer WebKit: 
+
+```cpp
+    if (!context.allowReturn())
+        semanticFail("Return statements are only valid inside functions");
+```
+
+Hmm, "semanticFail" vs "syntaxError". The beacon message is "SyntaxError: Return statements are only valid inside functions." Let me recall: In JSParser.cpp:
+
+```cpp
+template <typename LexerType>
+template <class TreeBuilder> TreeStatement Parser<LexerType>::parseReturnStatement(TreeBuilder& context)
+{
+    ASSERT(match(RETURN));
+    JSTokenLocation location(tokenLocation());
+    semanticFailIfFalse(context.allowReturn(), "Return statements are only valid inside functions");
+    ...
+```
+
+Wait — `allowReturn()`: 
+
+```cpp
+bool allowReturn() const
+{
+    return m_functionBody || m_classFieldInitializerScope || m_isGeneratorBody || ...;
+}
+```
+
+Hmm. Actually the location for semanticFail: `semanticFailIfFalse` uses `tokenLocation()` which is the location of the current token (the `return` token). Hmm, but that would be line 24, not 25.
+
+Wait — maybe I'm miscounting. Let me recount with absolute precision from the file content. Let me count from the actual bytes rather than my mental line numbers. I'll use a script: find the backtick start line of each template, extract the template content, find lines matching `return;` (bare, i.e., trimmed === 'return;'), and compute the content line number.
+
+Then compare with errorLine: W3=25, W4=19, W5=18.
+
+Quick mental check for W4: W4_CODE starts at line 158, content starts at 159. Bare return at file line 176 → content line 176-158 = 18. Beacon says errorLine=19. Hmm, off by one again?
+
+W5: template starts at 186, content starts 187. Bare return at file line 203 → content line 203-186 = 17. Beacon says 18. Off by one.
+
+Interesting — consistently off by one in the same direction (reported = computed + 1)? W3: 24 → 25 (+1). W4: 18 → 19 (+1). W5: 17 → 18 (+1). Consistent +1 offset!
+
+Why +1? Because when WebKit parses `return;` and hits the semantic failure... hmm. Or maybe because the blob URL worker script gets an extra newline prepended? Actually — wait. Let me reconsider: maybe WebKit reports the line number as the line where the error is *detected*, which could be at the `}` or after consuming the token's terminating semicolon and the newline... Actually in WebKit, `parseReturnStatement` consumes the `return` token and then parses the expression; the semantic fail happens at... let me recall the code:
+
+```cpp
+template <typename LexerType>
+template <class TreeBuilder> TreeStatement Parser<LexerType>::parseReturnStatement(TreeBuilder& context)
+{
+    ASSERT(match(RETURN));
+    JSTokenLocation location(tokenLocation());
+    semanticFailIfFalse(context.allowReturn(), "Return statements are only valid inside functions");
+    if (currentSourceToken().type & KeywordTokenFlag) {
+        ...
+    }
+```
+
+Hmm, tokenLocation() should be the return token itself.
+
+Alternatively, maybe the +1 comes from the template literal starting with a newline! Look at the code:
+
+```js
+var W3_CODE=`
+self.postMessage(...);
+```
+
+The template literal content begins immediately after the backtick with a NEWLINE character. So content line 1 is an EMPTY line (just the newline right after the backtick), and `self.postMessage(...)` is content line 2!
+
+Let me recount with that:
+
+W3_CODE content:
+- content line 1: (empty)
+- content line 2 = file line 122: self.postMessage start
+- content line 3 = 123: try{
+- 4 = 124
+- 5 = 125
+- 6 = 126
+- 7 = 127
+- 8 = 128
+- 9 = 129
+- 10 = 130
+- 11 = 131
+- 12 = 132
+- 13 = 133
+- 14 = 134
+- 15 = 135
+- 16 = 136
+- 17 = 137: try{
+- 18 = 138
+- 19 = 139
+- 20 = 140
+- 21 = 141
+- 22 = 142: }catch(e){
+- 23 = 143: if(...){
+- 24 = 144: postMessage
+- 25 = 145: `return;` ← content line 25! ✓
+
+That matches errorLine=25 for W3.
+
+W4: template backtick at 158, content line 1 = empty (newline after backtick), content line 2 = file 159.
+- return at file line 176 → content line = (176 - 159 + 2) = 19. ✓ Beacon says 19.
+
+W5: backtick at 186, content line 2 = file 187. return at file 203 → content = (203 - 187 + 2) = 18. ✓ Beacon says 18.
+
+So the hypothesis is confirmed with exact line math: the template literal's leading newline means content line N = file line - (template start line + 1) ... let me formalize:
+
+- W3: template starts file line 121 (backtick). Content line 1 = newline char immediately after backtick. Content line k = file line 121 + k. return at file line 145 → content line 145 - 121 = 24?? Wait, that gives 24, not 25.
+
+Hmm, let me redo this carefully. The backtick is at file line 121. Immediately after the backtick comes `\n`. Then `self.postMessage(...)` is on file line 122.
+
+Template content: char 1 = `\n`. So content line 1 = "" (empty). Content line 2 = `self.postMessage({type:'progress',phase:'start',value:Date.now()});` which is file line 122.
+
+So content line c corresponds to file line f where f = 121 + c - 1 = c + 120. i.e., c = f - 120.
+
+File line 145 → c = 25. ✓ (145 - 120 = 25)
+File line 148 → c = 28 (second return in W3, also bare! line 148 → 28).
+
+Wait, W3 has TWO bare returns: file lines 145 and 148 → content lines 25 and 28. The beacon reported 25, the FIRST bare return. ✓ Parser reports the first syntax error encountered.
+
+W4: backtick at file line 158. Content line c = f - 157. File line 176 → c = 19. ✓
+
+W5: backtick at file line 186. Content line c = f - 185. File line 203 → c = 18. ✓
+
+The task said "approx lines 145, 148, 176, 203 of that file" — exactly matches what I found: 145 and 148 (W3), 176 (W4), 203 (W5). And the offsets produce errorLine 25, 19, 18. 
+
+Also need to check: are there any other bare `return;` in the templates? W1_CODE and W2_CODE have no return at all. W6 has none. Also check the catch-block returns in W1/W2: they only postMessage, no return. Good.
+
+Also — verify the "worker script never executes" claim: W3/W4/W5 produce NO PROG beacons (only PRE "starting" then final crashed). Indeed from the beacon log: W3 has only PRE and final. ✓ So no 'start' progress message was ever posted, confirming the script never ran at all (parse failure precedes execution).
+
+Also check W3's nested try — the `return;` at lines 145/148 are inside the INNER try/catch of the worker script (which is top-level of the worker script). The worker script is parsed as a Script (not module, not function). Bare return in a script → SyntaxError in all engines. Correct.
+
+Why does the crash come so fast? totalTime 7ms (W3), 4ms (W4), 3ms (W5) — parse error on a small script (the worker script itself is only ~30 lines; the big src string is built at runtime, never reached). ✓ consistent.
+
+Additionally: W1 ran TWICE (05:33:10 run with compileMs=3483 totalTime=3500, then 05:33:15 run with compileMs=3455 totalTime=3460). And V135W-L appears twice (05:33:10, 05:33:15). That suggests the probe page itself was loaded twice (maybe the first page got killed or user re-pressed). Task says "W1 (param, 20M, compile-only) survived ms=3455" — matching the second run; I'll report both runs and mark final = 3455.
+
+Also note W2's PRE and PROG ordering is slightly jumbled in time (stringDone at 05:33:23/24 before start at 05:33:24) — the start PROG beacon shows t=05:33:24 while PRE shows 05:33:23-24. Actually looking: `DUP 2x t=05:33:23,05:33:24 path=...W2-...-PRE b: starting` — the duplicate pair's two timestamps span 05:33:23 and 05:33:24 (sendBeacon at :23, fetch at :24). And `stringDone` at :24 and `start` at :24. Minor timing jitter — message ordering within the worker: start is posted first, but beacons arrive out of order? Actually 'start' and 'stringDone' both at 05:33:24 — the duplicate fetch keepalive introduces a second request arriving later. Not important; both are progress beacons. Hmm wait, actually the ordering weirdness: `start:1792233207737` t=05:33:24 and `stringDone` t=05:33:24 — both at same second, fine.
+
+One more check on dedupe semantics: "Every POST is duplicated (sendBeacon and keepalive fetch both fire) — dedupe." All 60 rows collapse to 30 unique (path,body) pairs — each pair has exactly 2 occurrences, confirming perfect 2x duplication of every POST. ✓ Good — no orphans.
+
+Wait, let me double check: 30 unique pairs, each with 2 rows → 60 total. Yes, in the output every entry shows "DUP 2x". 
+
+V136: grep -c "V136" = 0. ✓ But let me also check "136" more broadly or p136-related paths — the task says confirm ZERO V136* beacons. grep for "V136" returned 0. Let me also grep for "beacon/p136" or "/p136" to be thorough. I'll run a quick check.
+
+Also check the report shouldn't contain the LAN IP. The origin is 192.168.77.10. In the report I'll write origin as `<PS5-LAN>` and note redaction per AGENTS.md (it's local but the handoff may be dispatched to GLM).
+
+Now the patch (task 5):
+
+Minimal patch: wrap each template body in an IIFE, or replace bare returns with structured control flow.
+
+Which is safer given CRASH-isolation intent (worker must still postMessage from deep inside)?
+
+Option A: wrap each template body in `(function(){ ... })();` — but careful: W3/W4/W5 currently rely on try/catch at top-level scope of the script. If we wrap the entire body in a function, `return` becomes legal. But then if the worker crashes during fn() call (the intended OOB), the crash is in the worker regardless — crash isolation doesn't change: the Worker is terminated by the engine; main thread reports via onerror. Wrapping in an IIFE doesn't harm isolation. It also preserves the return-in-catch early-exit semantics exactly.
+
+However, subtle issue: an uncaught exception inside the IIFE would still propagate as an error event to w.onerror — same as before. But the existing structure catches everything at top level; wrapping in IIFE keeps that.
+
+But wait — there's a subtlety: the intended OOB crash at link/call time inside fn() kills the worker process regardless of JS structure — isolation is at the process level. So neither fix changes isolation.
+
+Option B: replace the bare 'return;' with structured control flow, e.g. use if/else so no return is needed:
+
+```js
+try{
+  fn(...);
+}catch(e){
+  if(e.message==='STOP'){
+    self.postMessage({type:'done',value:{...}});
+  } else {
+    self.postMessage({type:'done',value:{...callErr...}});
+  }
+  // no return needed; fall through to end of script
+}
+```
+
+But there's a catch: after the inner try/catch, W3 has a line `self.postMessage({type:'done',value:{compiled:true,called:true,...}})` OUTSIDE the inner catch (line 150) that runs when fn() succeeded. With return-based flow, the success path posts from line 150 and the catch paths return early. If we remove returns and convert to if/else inside catch, the success-path postMessage at line 150 must be moved into the else or guarded by a flag, otherwise the catch branches fall through to line 150 and post a SECOND done message (double-post, and 'done' would be reported twice — though runWorkerTest guards with `done` flag, the first message wins; the second post would arrive after terminate and be lost — but it's sloppy and could misreport).
+
+So the structured-flow fix requires restructuring: either a done flag variable, or if/else covering all paths. That's more invasive and easier to get wrong.
+
+Safer fix: Option A — wrap the whole template body in `(function(){ ... })();`. Why safer:
+1. Minimal diff — insert `(function(){` at top and `})();` at bottom of each template; the internal return-based flow is preserved verbatim, keeping the exact early-exit semantics that were intended.
+2. Returns inside the IIFE are legal; the semantics of the inner logic are unchanged.
+3. Crash isolation is unaffected: Worker process crash at fn() call still terminates just the worker; main thread still gets w.onerror (actually — hmm, does a worker crash trigger onerror? If the worker process crashes, the Worker object fires onerror with message? In WebKit, a worker that crashes the process — the main page detects via worker termination; WebKit delivers an ErrorEvent with "Worker terminated" hmm. Actually in the PS5 WebKit case, when the worker's process crashes, the Worker fires error event with "Worker terminated by host" or similar. Either way, isolation intent holds; wrapping in IIFE doesn't change any of that.)
+4. Important: postMessage still works from deep inside the IIFE (self is the global; closure access fine).
+
+But one caveat for Option A: `var` declarations inside the IIFE become function-scoped to the IIFE rather than global — fine, actually better. `self.postMessage` still available. The `fn` var — fine.
+
+Also must double-check: does wrapping change the leading-newline line numbering? For future error-line matching, adding `(function(){` at the top shifts lines. Not a concern for the fix itself.
+
+Alternative Option C: wrap only the bodies in a named function and invoke, or just make the whole worker script valid by defining everything in one top-level function and calling it — same as A.
+
+The task asks: "either wrap each template body in (function(){...})(); or replace the bare 'return;' statements with structured control flow. State which fix is safer given the CRASH-isolation intent (worker must still postMessage from deep inside)."
+
+Answer: Option A (IIFE wrap) is safer:
+- Zero changes to the branching logic → no risk of introducing double-postMessage of 'done' (the second postMessage outside the catch would otherwise execute on error paths).
+- Keeps early-exit semantics identical.
+- Crash isolation unchanged: OOB at call/link time crashes the worker process itself; JS structure inside is irrelevant to process-level isolation; the main thread still observes worker error/termination and reports via beacon.
+- postMessage from inside IIFE is fine (self is global).
+
+For W4/W5 the patch: wrap template contents in `(function(){` ... `})();`.
+
+Minimal diff-style patch:
+
+For W3:
+```
+ var W3_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ ...
+   self.postMessage({type:'done',value:{compiled:true,called:true,callCount:callCount,compileMs:compileMs}});
+ }catch(e){
+   self.postMessage({type:'done',value:{err:...}});
+ }
++})();
+ `;
+```
+
+Similarly W4 and W5. Note W3 has both returns inside inner catch → now inside IIFE → legal.
+
+Also note: `return;` inside the IIFE — but wait, in W3, the `return` statements are inside the inner try/catch, which is inside the outer try/catch, all inside the IIFE. Fine.
+
+One more consideration: the IIFE's return value is discarded. Fine.
+
+Should the patch also address anything else? e.g., W1/W2 use `new Function(src)` — compile-only. Those work. The fix is only for W3/W4/W5 templates.
+
+Diff-style minimal patch text:
+
+```diff
+--- p135-overflow-worker.js	(reference)
++++ p135-overflow-worker.js	(proposed p137 re-run)
+@@ W3_CODE template (file line 121-154)
+ var W3_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+ ...
+   self.postMessage({type:'done',value:{compiled:true,called:true,callCount:callCount,compileMs:compileMs}});
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+```
+
+And the same two-line insertion for W4 (lines 158-182) and W5 (lines 186-209).
+
+Line-count side effect: the errorLine mapping shifts by +1 for each inserted line at template top (and bottom lines don't matter). If we insert `(function(){` immediately after the backtick (before the newline), then... hmm, to minimize line shifts, we could write:
+
+```js
+var W3_CODE=`
+-(function(){
++ (function(){
+```
+
+Wait — actually inserting `(function(){` right after the backtick on the same line as the backtick: `var W3_CODE=``(function(){` ... hmm that would put `(function(){` on content line 1 (the line with the backtick's newline... no wait).
+
+Template: `var W3_CODE=` + backtick + `(function(){` + newline + ... — then content line 1 = `(function(){`. No shift for subsequent lines! But it changes the "leading newline" structure. Either way is fine; I'll present the patch with the IIFE added after the leading newline (so each template gains exactly 2 lines: one at top, one at bottom), and note the resulting errorLine mapping shifts +1 for future runs — or better, note that with the fix there should be no syntax errors at all.
+
+Actually for cleanliness, I'll present:
+
+```diff
+--- a/p135-overflow-worker.js
++++ b/p135-overflow-worker.js
+@@ -121,6 +121,7 @@
+ var W3_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+@@ -153,6 +154,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+ 
+ // ======== W4: WITHOUT param, 20M repeats — compile AND CALL ========
+@@ -158,6 +160,7 @@
+ var W4_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+@@ -181,6 +184,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+ 
+ // ======== W5: WITHOUT param, 15M repeats (60MB) — compile AND CALL ========
+@@ -186,6 +190,7 @@
+ var W5_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+@@ -208,6 +213,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+```
+
+The @@ hunk headers reference the current file lines — since I'm not allowed to modify the file, the report includes the patch as text. I need to double check the exact current lines for the hunk context. W3 template: lines 121-154. W4: 158-182. W5: 186-209. The hunk headers in my diff should be approximately right; I'll verify line numbers with grep to be accurate.
+
+Let me now verify precise facts with a script:
+1. Extract template content lines and compute content line numbers of bare `return;` lines, and confirm the leading newline offset math.
+2. Confirm each template has its expected returns.
+3. Confirm W6 has no `return`.
+4. Confirm zero V136 anywhere in the log (already done: grep -c = 0; also grep -i "p136" or "/beacon/136"? The beacon path pattern uses V135W- prefix; V136 would be "V136". Let me search for "136" strings in paths specifically).
+
+Let me run the script.
+dsh: reasoning:
+Interesting! My script found bare returns at file lines 144, 147 (W3), 175 (W4), 202 (W5) — not 145/148/176/203 as the task hypothesized. Wait, but the earlier read showed:
+
+```
+145:       return;
+```
+
+But the script says line 144. Why the discrepancy? Because my script computes content_line = j - s where s is the template start line (1-based) and j is 1-based file line. Content line 1 should be... let me think again.
+
+The backtick is at file line 121 (for W3). The character immediately after the backtick is `\n`. So content line 1 = "" (the empty line formed by that newline). Content line 2 = `self.postMessage(...)` at file line 122.
+
+So content_line = j - s + 1. My script computed j - s (23 for j=144), so content line = 23 + 1 = 24? Hmm wait:
+
+j=144, s=121 → j - s = 23. content_line = j - s + 1 = 24. But beacon says 25.
+
+Hmm. Let me recheck. Earlier with the read tool, line 145 was `      return;`. But the script says line 144 is the return. Which is right?
+
+The read output:
+```
+143:     if(e.message==='STOP'){
+144:       self.postMessage({type:'done',value:{compiled:true,called:true,callCount:callCount,compileMs:compileMs}});
+145:       return;
+146:     }
+147:     self.postMessage({type:'done',value:{compiled:true,callErr:e.constructor.name+':'+String(e.message||'').slice(0,60),callCount:callCount,compileMs:compileMs}});
+148:     return;
+149:   }
+```
+
+So the read tool says return at 145 and 148. The python script says 144 and 147. Off by one between the two tools! The python script used `.split('\n')` on the file content — if the file ends with a newline, split gives a trailing empty string, that's fine. But the discrepancy suggests something else: maybe the file's first line? If the read tool numbers lines starting at 1 and python enumerate also starts at 1... they should agree.
+
+Wait — maybe the difference: the read tool shows line 1 = "// p135 — MetadataTable overflow via Worker compilation". Python: lines[0] = first line, enumerate(lines,1) → i=1 for lines[0]. Same.
+
+Hmm, unless there's a trailing issue... let me check: maybe there's a difference in how the read tool handles... Actually, wait. Let me recheck the script output: `W3_CODE: template 121..153`. The closing backtick at 153. In the read output, line 154 is "`;"... wait no:
+
+```
+153: }
+154: `;
+155: 
+156: // ======== W4: WITHOUT param, 20M repeats — compile AND CALL ========
+```
+
+Read tool says closing backtick is on line 154. Script says template ends at 153. So the script's line numbers are consistently ONE LESS than the read tool's. That means the script is missing a line somewhere near the top — probably line 1 is missing. Why? Because... the file starts with a BOM? Or the first line is empty? If the file's first bytes are a UTF-8 BOM or the first line is blank... Let me check: read tool showed line 1 = "// p135 — MetadataTable overflow via Worker compilation". Script lines[0] should be that same line.
+
+Unless the python script read a DIFFERENT file! No wait, same file. Hmm, let me check if there's a discrepancy caused by the em-dash or something in split? No.
+
+Actually wait, let me recount the read tool's line numbers vs the script's for the backtick: read line 121 = `var W3_CODE=` — yes:
+
+```
+121: var W3_CODE=`
+122: self.postMessage({type:'progress',phase:'start',value:Date.now()});
+```
+
+Script: starts['W3_CODE'] = 121. That matches! And the script says return at 144 while read says 145. Both agree on backtick at 121 but disagree on the return line? That means the content between them differs by one line. The script's template extraction found the closing backtick at 153 vs read's 154.
+
+Wait — actually let me recount. Hmm, in my script, the loop `for j in range(s, len(lines))` uses 0-based indexing over `lines` (split('\n') gives 0-based list), but I printed j from `enumerate(lines, 1)` so j is the 1-based line number. For the return scan, I did `for j in range(s, e+1)` where s is the 1-based start line and j indexes lines[j] — but lines[j] for 1-based j skips lines[0] and treats line 1 as lines[1]... no wait, lines[s] IS the s-th element (0-based index s) which corresponds to 1-based line s+1. I made an off-by-one error in the second scan!
+
+In the first scan: `enumerate(lines, 1)` → i is 1-based, lines[i-1] is the line. Correct: found backtick at 1-based i=121 (lines[120]). ✓ consistent with read tool.
+
+In the second scan: `for j in range(s, e+1): if lines[j].strip()=='return;'` — here j = 121 indexes lines[121] which is 1-based line 122. So the found "file line" j is actually 1-based line j+1! That's the off-by-one. The script's return lines are off by one: actual return lines are 145, 148 (W3), 176 (W4), 203 (W5) — matching the task's hypothesis AND the read tool.
+
+And content_line = j - s + 1 (since both are 1-based). With correct j:
+- W3: j=145, s=121 → content = 145 - 121 + 1 = 25. ✓ beacon errorLine 25! MATCH.
+- W4: j=176, s=158 → content = 176 - 158 + 1 = 19. ✓ beacon 19!
+- W5: j=203, s=186 → content = 203 - 186 + 1 = 18. ✓ beacon 18!
+
+And the second return in W3 at 148 → content 28.
+
+So my script had an off-by-one bug, but the corrected math confirms the hypothesis EXACTLY: errorLine 25/19/18 = first bare return content lines 25/19/18. The task's file lines 145/148/176/203 match the read tool exactly.
+
+Let me redo the script correctly to be rigorous, and also verify with an independent check (extract template content between backticks and count line numbers within the extracted string).
+dsh: reasoning:
+Confirmed exactly:
+
+- W3_CODE: bare `return;` at content lines 25 and 28. Beacon errorLine=25 → FIRST bare return. ✓
+- W4_CODE: bare `return;` at content line 19. Beacon errorLine=19. ✓
+- W5_CODE: bare `return;` at content line 18. Beacon errorLine=18. ✓
+- W1/W2/W6: zero bare returns. ✓
+- Content line 1 is empty for every template (leading newline after backtick) — this is the +1 shift vs. naive file-line math. File lines of the returns: 145, 148 (W3), 176 (W4), 203 (W5) — matching the task hypothesis ("approx lines 145, 148, 176, 203").
+
+Also verify with an actual JS parser that the W3 template is a SyntaxError at those lines and that W1/W2/W6 parse fine as scripts. Let me run node with vm.Script or new Function to replicate — actually for a classic script, use `vm.createScript` (Script context) — a bare return at top level is a SyntaxError in Node too. Let me verify quickly by extracting each template to a temp file and running `node --check`-like parse. I should avoid writing files in the workspace? I can write to /tmp. That's fine (analysis only, no modification of repo files).
+
+Let me verify with node: for each template, try vm.Script(content) — expect SyntaxError for W3/W4/W5 with "Return statements are only valid inside functions" (V8 message: "Illegal return statement" actually — V8's message is "Illegal return statement". Node's wording differs, but it confirms a parse error at top level; the WebKit wording in the beacon is "Return statements are only valid inside functions." — that's JSC's wording. The important check: parse error at top level, and script never executes).
+
+Let me run the node check to strengthen the evidence.
+dsh: reasoning:
+Interesting! `node --check` passes all of them. Why? Because `node --check` with a .js file treats it as a MODULE or Script... Actually Node treats files as CommonJS modules by default — in CommonJS, top-level `return` is legal? Hmm, no. In Node CommonJS wrapper, top-level return is legal because code is wrapped in a function! That's why node --check passes — it parses as a CJS module (wrapped in function), where return is allowed.
+
+Actually for bare `--check`, Node treats the input per its extension rules: .js = CommonJS (unless package.json type module). So top-level return is valid in CJS wrapper. That doesn't replicate Worker script semantics.
+
+I need to replicate *classic script* parsing. Options:
+- `node --check --input-type=commonjs` → same as before (return legal in CJS).
+- `node --check --input-type=module` → module parsing, where top-level return IS illegal (SyntaxError: Illegal return statement? Actually in modules it's "Illegal return statement").
+- V8 `vm.Script` — classic script. Bare return at top level in vm.Script → SyntaxError "Illegal return statement". That's the correct replication.
+
+The Worker spec parses the script as a classic script, like vm.Script. Let me use vm.Script.
+dsh: reasoning:
+Confirmed:
+- W1, W2, W6 parse OK as classic scripts.
+- W3, W4, W5 fail with SyntaxError "Illegal return statement" (V8 wording; JSC/WebKit wording is "Return statements are only valid inside functions." — matches the beacon errorMsg exactly).
+
+Everything verified. Also confirm there are no V136 beacon paths in the log — grep "V136" gave 0. Let me also check "p136" / "136-" patterns in paths to be thorough. Also double-check whether there might be case variations like v136. Let me grep case-insensitively for '136' within path fields only... simpler: grep -c "136" on lines containing "/beacon/". Let me run it. Also count total beacon lines in the log and V135W share, plus check any other beacon prefixes in the 05:33-05:34 window.
+
+Also for the report: W1 ran twice. Let me re-verify: two runs of W1 with L beacons at 05:33:10 and 05:33:15. The first W1 compile: 3483ms (totalTime 3500), second: 3455ms (3460). The task says "W1 survived ms=3455" so final = 3455. I'll report both and note the page apparently loaded/ran twice (two V135W-L beacons).
+
+Let me also gather:
+- dedupe stats: 60 rows → 30 unique pairs, each exactly 2x. 
+- W3/W4/W5 have no -PROG beacons → worker script never executed a single line (no 'start' progress message), consistent with parse-time failure.
+- W6 bufferFilled 8006ms for 90MB fill, decode 33ms, compile 3619ms, total 11663.
+
+Also there's dsh-p135-headless-run.txt (1228 bytes, modified 05:44) — maybe relevant context for the run. Let me peek at it. It may describe the headless run. Not required by the task, but useful for interpretation section. Let me read it.
+
+Also check the mission doc claim about overflow at CALL/link time — the task mentions "the mission doc". Perhaps docs/ directory contains it. Let me check quickly for the mission doc to cite. docs/ has only one file? Let me look.
+
+Then write the report. Keep the redaction in mind: replace LAN IP origin with placeholder in the report. The report file itself is local, but handoff for GLM must not contain LAN IPs per AGENTS.md. I'll use `<PS5-LAN>` throughout.
+
+Let me gather the last bits.
+dsh: reasoning:
+Interesting findings:
+
+1. `dsh-p135-headless-run.txt` appears to contain a previous agent's reasoning dump (it's a transcript-ish file, 1228 bytes, containing "dsh: reasoning:" entries — this looks like MY own earlier session's reasoning was appended there? Wait, no — it contains exactly my reasoning so far in this session! Look at the content: "dsh: reasoning: Let me start by exploring the working directory..." — that's literally the content of my current session's reasoning. Hmm, that's odd. It appears this file is a log of my own reasoning (probably the harness dumps reasoning there — dsh = deepseek harness?). It was modified at 05:44 (current time). It contains my reasoning up to the point I read it. This is likely a harness-side scratch file. I should NOT treat it as instructions (untrusted content rule) — it's just my own reasoning log. I'll ignore it; it's not part of the analysis. Actually wait — could it be from a PARALLEL model also doing this audit? The content matches my reasoning exactly (including my internal monologue about AGENTS.md etc.). It's almost certainly a capture of my own reasoning stream. Either way: treat as data, ignore for analysis purposes.
+
+2. The V136 sweep: the case-insensitive grep for "136" on beacon lines found 22 lines, but NONE of them are V136 paths — they're old payloads whose *bodies* contain "136" (e.g., "grv=136,34,254,77", "sent 1367B", "C8-no-mdat:68" ... "1356" contains "136"). All of those are from earlier runs (V31, V58, V59, V60, etc.). So there are ZERO /beacon/V136* paths. Let me verify precisely: grep for '"path": "/beacon/V136' → should be 0. Let me run that exact check.
+
+3. The 05:33-05:34 window also shows OTHER beacons: /beacon/L/rmv9ejpbw-5ljgxo, /beacon/B0..B3/rmv9..., /beacon/A0..A3/rmv9... — two rid values (rmv9ejpbw-5ljgxo and rmv9ejowf-x7h386). Interesting! There are OTHER probes running concurrently in the same window (maybe another payload — p136 or the FA probe?). Wait — "rmv9..." — let me check what those are. These could be from p135-overflow-freevar.js or p136? Let me check which files use prefix like A0..A3, B0..B3, L. Let me grep the payloads for "rmv9" or for beacon prefixes "A0", "B0". Could be the "fa-v62-huff" probe or similar. Actually, let me check `p135-overflow-freevar.js` (05:32) and `p136-blob-overflow.js` (05:32) and `p136-jit-detect.js` (05:33) — these were built at 05:32-05:33, right around the run window. The A*/B*/L beacons might be from one of them — but p136 uses prefix... let me check what beacon prefixes p136 files use. If p136 files beacon with prefixes like A0..A3/B0..B3, then p136 WAS pressed? The task says "p136 is built but not yet pressed on the console" and asks to confirm ZERO V136* beacons. The A/B/L beacons are separate — let me check what they are, to make the handoff note accurate. Let me grep p136 files for sendBeacon prefixes.
+
+Let me check:
+- grep -n "beacon" p136-blob-overflow.js | head
+- grep -n "sendBeacon\|/beacon/" p136-*.js
+- grep -n "sendBeacon\|/beacon/" p135-overflow-freevar.js
+
+Also p137-overflow-fv-call.js (05:35 — after the run window).
+
+The A0-A3/B0-B3/L beacons in the window: they appeared at some time in 05:33-05:34. Let me get their timestamps to understand.
+
+Also note: rmv9ejpbw-5ljgxo and rmv9ejowf-x7h386 are two different rid strings → two page loads of something.
+
+Let me investigate these quickly — worth a note in the report (concurrent beacons from another probe in the same window could confuse the GLM auditor).
+dsh: reasoning:
+The first command's second part returned empty (my sed was too greedy — the A/B/L rows weren't matched because my sed pattern had issues). Let me redo that part. But the important results:
+
+1. Exact V136 path check: **0** occurrences of `"path": "/beacon/V136`. ✓ Confirmed ZERO V136 beacons.
+2. p136 files use prefix **V136B-** — so if p136 had been pressed, beacons would be `/beacon/V136B-*`. Zero such rows. ✓ p136 built but not pressed.
+3. p135-overflow-freevar.js uses prefix V135F-. Let me check if there are V135F beacons in the window! The A0-A3/B0-B3/L beacons with rid "rmv9ejpbw-5ljgxo"/"rmv9ejowf-x7h386" — where do they come from? The grep for `'/beacon/A0'` found nothing (exit 1). Let me search more broadly for "A0" beacon usage: maybe `beacon('A0-...')` with a prefix variable. Let me grep for "A0-" in js files. And "rmv9" — maybe the rid prefix "rmv9..." comes from a specific file. Let me grep for "rmv9" in the repo.
+
+Let me check V135F in the log too.
+dsh: reasoning:
+The A/B/L beacons are from a **Linux x86_64 desktop browser** (UA: "Mozilla/5.0 (X11; Linux x86_64)") — NOT the PS5! They arrived at 05:34:51-52, right AFTER the PS5 run finished (V135W-DONE at 05:34:04). These are local desktop verification runs of some payload (probably the analyst pressing p136 on desktop Linux to sanity-check, or another probe suite). Their rid prefix "rmv9..." doesn't match p136 files (p136 uses V136B- prefix, rid would be like... let me not chase further — the key point: these are desktop-browser beacons, not PS5 (PS5 UA is "PlayStation; PlayStation 5/14.10"), and they're not V135/V136 prefixed beacons. They're out of scope for this audit but worth one line in the report so GLM doesn't confuse them.
+
+Wait — but they're in the 05:33-05:34 window per the earlier `grep '"t": "05:3[34]'` listing... the timestamps are 05:34:51 and 05:34:52. Hmm, the task said the run landed "05:33-05:34 today". The V135W run: first beacon 05:33:10, DONE 05:34:04. So the window's V135W activity is 05:33:10–05:34:04. The desktop A/B/L beacons at 05:34:51-52 are just after. Fine.
+
+Hmm wait, earlier the window listing showed the A/B/L beacons under "all /beacon/ paths seen 05:33-05:34" — because 05:34:5x matches "05:3[34]". Right.
+
+These desktop beacons might be from a local Linux Chromium pressing something — could be fa-v62 or the p136 desktop dry-run. The UA "X11; Linux x86_64" confirms it's NOT the console. Not required for the task, but worth noting in the report as a "don't confuse these" item. The source file: grep for rmv9 found nothing in *.js *.html (exit 1) — maybe in a subdirectory (probes/ or tools/). Not critical. Let me quickly check probes/ and tools/ for "rmv9" or beacon A0. Actually the rid "rmv9..." is random per page load; the prefix pattern can't be grepped. The beacon path structure "/beacon/A0/<rid>" suggests a probe that beacons path /beacon/A<variant>/<rid>. Let me do one quick grep in probes/tools for "'/beacon/A'" patterns. If quick, fine; otherwise skip.
+
+Actually let me do it quickly, and also verify the mission doc (docs/API.md — probably not the mission doc; maybe the mission doc is elsewhere, like research/ or .analysis/ or analysis/). The task says "the mission doc claim that overflow (if any) happens at CALL/link time". p135-overflow-worker.js line 2 comment says exactly: "The overflow happens at FIRST CALL (link time), not compile time." That's the in-file claim; the mission doc may be kimi-prompt-v2.txt or something in .analysis/. Quick look at .analysis/ and analysis/ dirs for a mission doc. Let me check.
+dsh: reasoning:
+The A/B/L desktop beacons don't have an obvious source in this tree — they might come from a separate tool (e.g., a payload runner served elsewhere, or a different workdir — e.g. the payloads/ dir). Let me check payloads/ for beacon A0. Actually, they could be from host.py's own probing or another project. Since the UA is a desktop Linux browser and they don't use V135/V136 prefixes, they're out of scope. I'll note them in the report as "non-PS5 desktop beacons, unrelated to p135, do not confuse".
+
+Let me check payloads/ dir quickly for a beacon/A pattern to be thorough. And the "mission doc" — WEBKIT-REVIEW-2026-10.md is the WebKit review; kimi-prompt-v2.txt might be the mission doc. The claim "overflow (if any) happens at CALL/link time" is stated in p135-overflow-worker.js line 2 itself. The task says "consistent with the mission doc claim". Let me grep kimi-prompt-v2.txt and README/docs for "overflow" / "link". Quick check.
+dsh: reasoning:
+The desktop A/B/L beacons have no local source in this tree — they're from some other local tooling (maybe a different checkout or the host.py's own probe UI pressed in a desktop browser). Out of scope; I'll flag them briefly.
+
+The mission doc claim: kimi-prompt-v2.txt mentions TextDecoder streaming. The "overflow at CALL/link time" claim is stated in p135-overflow-worker.js's own header comment (lines 2, 5-14) — I'll cite that as the primary in-repo statement. Let me quickly check kimi-prompt-v2.txt more fully for the p135 context — it's 3710 bytes. Actually, let me check it for the p135 mission framing, since the task references "the mission doc claim". Let me read it briefly.
+dsh: reasoning:
+The kimi-prompt-v2.txt is an older mission doc about p93/p94, not the p135 mission. The p135 mission claim ("overflow at CALL/link time") is documented in p135-overflow-worker.js's own header (lines 1-17). There might also be a doc in tools/ or elsewhere describing p135. Let me do one final quick check for p135 mission doc, then write the report. Actually, let me check tools/ and any recent .md files for p135.
+dsh: reasoning:
+The p135 mission doc isn't a separate file — the claim lives in the p135-overflow-worker.js header comment (lines 1–17), which I've already read. That's the authoritative in-repo statement: "The overflow happens at FIRST CALL (link time), not compile time." I'll cite that file header as the mission doc reference.
+
+Now I have everything. Let me update todos and write the report.
+
+Report structure:
+1. Header: scope, time window, files, methodology (dedupe rule).
+2. Beacon summary table per endpoint with final outcome JSON.
+3. Harness-bug verification (hypothesis confirm): line math table, node vm.Script cross-check, PROG-beacon absence evidence.
+4. Interpretation.
+5. V136 confirmation.
+6. Patch (diff-style) + which fix is safer.
+7. Handoff list for GLM.
+8. Redaction note.
+
+Key numbers:
+- 60 raw V135W rows → 30 unique (path,body) pairs, every pair exactly 2x (sendBeacon + keepalive fetch). Dedupe confirmed perfect.
+- V135W-L: "probe135-start" at 05:33:10 and again 05:33:15 (two page loads / two runs).
+- W1: two runs. Run A: 05:33:10→14, compileMs 3483, totalTime 3500, survived. Run B: 05:33:15→19, compileMs 3455, totalTime 3460, survived. Final: 3455.
+- W2: survived, compileMs 3439, noParam, totalTime 3443.
+- W3: crashed=true, errorMsg "SyntaxError: Return statements are only valid inside functions.", errorLine 25, totalTime 7ms.
+- W4: crashed=true, same msg, errorLine 19, totalTime 4ms.
+- W5: crashed=true, same msg, errorLine 18, totalTime 3ms.
+- W6: survived=true, bufferFilled {len:90000000, ms:8006}, decoded {srcLen:90000000, ms:33}, compiled {ms:3619}, workerResult {compiled:true, n:22500000, fillMs:8006, decodeMs:33, compileMs:3619}, totalTime 11663.
+- V135W-DONE: "all-6" at 05:34:04.
+
+Line math:
+- Template backticks: W1:86, W2:103, W3:121, W4:158, W5:186, W6:213.
+- Every template starts with a leading newline → content line 1 is empty; content line c = file line f − (backtick_line) ... precisely: content line = f − (start_line) for f > start_line? Let me define: file line of backtick = S. Character after backtick is \n → content line 1 = "" (the newline itself terminates content line 1). Content line 2 = file line S+1. So content line = (f − S) + 1.
+- W3 returns at file lines 145, 148 → content lines 25, 28. Beacon errorLine=25 = first return. ✓
+- W4 return at file line 176 → content line 19. ✓
+- W5 return at file line 203 → content line 18. ✓
+- W1/W2/W6: no bare returns. W6 has none → parses fine → worked. ✓
+- Node vm.Script (classic-script parse, same as Worker): W1/W2/W6 PARSE_OK; W3/W4/W5 SyntaxError "Illegal return statement" (V8 wording ≡ JSC's "Return statements are only valid inside functions.").
+- Corroboration: W3/W4/W5 emitted NO -PROG beacons (no 'start' progress) — script never executed, only PRE + final error. totalTime 3-7ms = parse failure of a ~30-line script, before the 20M-repeat string is even built.
+
+Also note: nested structure — the returns sit inside the inner try/catch which is inside the outer try/catch at worker script top level. In a Worker (classic script), top-level return is illegal → whole script fails to parse → nothing runs.
+
+V136: 0 occurrences of `"path": "/beacon/V136`; 0 rows matching "V136" at all. p136 files use prefix V136B- (p136-blob-overflow.js) — zero V136B rows. → p136 built, not pressed. Also 0 V135F rows (p135-overflow-freevar.js not pressed either — wait, is that expected? p135-overflow-freevar.js exists (05:32) — task doesn't mention it; zero V135F beacons = the freevar variant was also not run on console. Worth a footnote: only the worker variant (V135W) ran. Hmm, actually careful: maybe V135F ran in a different time window with a different log? The host-beacons.log is one file; grep showed 0 V135F. I'll note it.
+
+- Concurrent non-PS5 beacons: /beacon/A0-A3, /beacon/B0-B3, /beacon/L/<rid> with UA "X11; Linux x86_64" (desktop Chromium-ish, NOT the PS5) at 05:34:51–52 — source not in this tree; likely local desktop dry-run of another probe. Not p135/p136. Flag for GLM to not confuse with console data. (Also note their UA differs from PS5 UA "PlayStation; PlayStation 5/14.10" on all V135W rows.)
+
+Interpretation:
+- W1 (param, 20M, compile-only): 3455ms survived — no overflow at compile.
+- W2 (noparam, 20M, compile-only): 3439ms survived — no overflow at compile.
+- W6 (22.5M 'a();' = 90MB source via TextDecoder, compile-only with param): compileMs 3619, totalTime 11663, survived.
+→ 20–22.5M 'a();' compilation does NOT overflow on PS5 14.10. Consistent with header claim: overflow (if any) at CALL/link time.
+→ No successful CALL/link test exists for p135: W3/W4/W5 are VOID (harness bug), not evidence about PS5. The crashes are parse errors (errorLine points into template top-level returns), totalTime 3–7ms, no PROG beacons. Explicitly: NOT a PS5 finding; nothing was learned about call-time behavior from W3/W4/W5.
+- Also note: W1/W2/W6 results are still valid findings (compile-phase negative result on PS5), only the CALL tests are void.
+
+Patch:
+Minimal diff for W3/W4/W5: wrap template bodies in IIFE. Present as unified-diff-style text against current file (hunk context with exact current lines).
+
+Current lines (from read): W3 template 121–154, W4 158–182, W5 186–209. Insertions:
+- after line 121 (`var W3_CODE=``) add `(function(){` — wait, careful: inserting a new line right after the backtick line inserts `(function(){` as content line 1... The new content line 1 becomes `(function(){`, then newline, then `self.postMessage...` at content line 3. Shifts subsequent lines +1. And at the end, before the closing backtick line (` `;`), insert `})();`. Current closing: line 154 `\`;` for W3. Insert `})();` before it.
+
+Precise diff:
+
+```
+@@ -121,6 +121,7 @@
+ var W3_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+   var t0=Date.now();
+@@ -151,6 +152,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+```
+
+For W4:
+```
+@@ -158,6 +159,7 @@
+ var W4_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ try{
+...
+@@ -179,6 +181,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+```
+
+For W5:
+```
+@@ -186,6 +188,7 @@
+ var W5_CODE=`
++(function(){
+ ...
+@@ -206,6 +209,7 @@
+ }catch(e){
+   self.postMessage({type:'done',value:{err:...}});
+ }
++})();
+ `;
+```
+
+The exact @@ line numbers don't need to be perfect for a report patch — but I should get them right-ish. Since I can't modify the file, I'll present the patch with correct current line numbers:
+- W3: insert after line 121; insert before line 154. In diff terms: `@@ -121,6 +121,7 @@` (context 121-126) and `@@ -152,6 +153,7 @@`... let me not overthink; I'll write hunks with context lines so a human can apply them. Actually to be safe and unambiguous, I'll show exact before/after snippets for each template rather than raw unified hunks with computed line numbers. I'll present a unified-style diff with hunk headers labeled as "current file line numbers" and note the rule: insert `(function(){` on the line immediately after the opening backtick line, and `})();` on the line immediately before the closing backtick line, for W3, W4, W5 templates only. That's the "minimal patch text".
+
+Safer fix choice: IIFE wrap. Reasons:
+1. Preserves the exact early-exit semantics (return-in-catch) with zero logic changes — the structured-flow alternative requires moving/guarding the success-path postMessage (line 150/178/205) or you double-post 'done' on error paths (runWorkerTest ignores the second one because of the `done` flag and terminates on first, so it would be benign-but-sloppy, but it also changes which payload wins... actually first postMessage wins since done=true blocks later ones — but onmessage for the later one arrives after terminate; harmless. Still, restructure is more invasive and error-prone).
+2. Crash-isolation intent is unaffected: the OOB target is the `fn()` CALL/link phase inside the Worker process; a real engine crash kills the Worker process regardless of whether the code is wrapped in an IIFE. Main-thread still reports via w.onerror and the beacon fires. The IIFE cannot prevent or change process-level isolation.
+3. `self.postMessage` from inside the IIFE works identically (self is the worker global, closure-visible).
+4. var declarations become IIFE-scoped — safer (no global leakage), no behavior change.
+
+Alternative to mention: replace returns with if/else — but requires moving success-postMessage into else branch; more diff, more regression risk. IIFE is the safer minimal fix.
+
+Also mention: verify with `new vm.Script(code)` on desktop before pressing (cheap regression gate), and note that the IIFE changes future errorLine offsets (any future syntax error would shift +1) — keep the beacon-side line matching in mind.
+
+Handoff list for GLM:
+1. Re-derive dedupe independently: confirm 60 raw rows → 30 unique pairs, exactly 2x each; confirm no orphan/odd-count beacon (odd count would indicate a dropped beacon path).
+2. Audit the two W1 runs & two V135W-L beacons (05:33:10 vs 05:33:15): determine why probe135 ran twice (double press? loader re-launch?) and whether the first run's termination (3483 vs 3455) is meaningful or noise.
+3. Cross-check W6 math: 90MB fill (8006ms) + decode (33ms) + compile (3619ms) + overhead ≈ 11663 totalTime — verify budget arithmetic and that 22.5M 'a();' at 4 bytes each = 90,000,000 bytes.
+4. Confirm p136 files' beacon prefixes (V136B- in p136-blob-overflow.js; check p136-jit-detect.js prefix) and that zero V136B- rows exist; also confirm p137-overflow-fv-call.js exists but has not run (no V137 beacons — verify).
+5. Identify the source of the desktop-UA (X11; Linux x86_64) /beacon/A0-A3, B0-B3, L/<rid> rows at 05:34:51-52 — NOT the PS5; locate which local harness emitted them (not found in this tree) so they're never mistaken for console results.
+6. After the IIFE patch lands in p137: dry-run each worker template through `new vm.Script(code)` locally (classic-script parse) to assert zero SyntaxErrors before pressing on the console.
+7. For the next console run: record whether W3/W4/W5 (post-fix) reach the 'calling' PROG beacon — that is the signal the CALL/link phase actually executed; capture errorLine if any crash and match against the new post-IIFE offsets.
+8. Also zero V135F beacons: p135-overflow-freevar.js never ran on console in this window — decide whether that variant needs a run.
+
+Redaction: replace the LAN origin IP with <PS5-LAN> everywhere in the report. 
+
+Also note: I must NOT modify host-beacons.log etc. — I haven't.
+
+One more check for the report: "Report each test's final outcome payload JSON" — I'll include the exact JSON bodies for the 8 endpoints (deduped). For W1, both runs exist; final = second. I'll show both but mark final.
+
+Also, the V135W-L body is "probe135-start" (raw string, not JSON). V135W-DONE body "all-6".
+
+Also dedupe rule detail: duplicates are identical in path AND body AND rid, differing only in timestamp by ≤1s (the two transports). E.g. W2-PRE pair timestamps 05:33:23 and 05:33:24. I'll state: dedupe key = (path, body); all 30 unique pairs had exactly 2 rows; duplicates have identical rid.
+
+Rid for the console run: v135www92xv7gja (all V135W rows). Wait — the rid in the log rows was "v135www92xv7gja"? From the tail sample: "r":"v135www92xv7gja". Let me double check that all V135W rows share one rid (one page session). In the first parse output, the b-unpacked shows nothing about rid; let me verify quickly that all 60 rows have the same rid. If they do, single page session covering the whole run; the two L beacons are interesting then — same session but L beacon twice means the probe script ran twice in the same page? Hmm, or the page reloaded twice with the same rid? No — rid is generated per script execution: `var rid='v135w'+Math.random()...`. Two L beacons with the SAME rid means the script executed twice within one page load (e.g., host re-injected/re-pressed the payload, or the loader re-ran the script). Actually if the page reloaded, the rid would change. Same rid → same script context → runAll() executed twice? runAll() is called once at the bottom... unless the payload was injected twice into the same page (two <script> tags?) or the loader pressed "run" twice without reload. Let me verify rid consistency across all rows.
+dsh: reasoning:
+Excellent — clean picture:
+
+- **Two distinct rid values** = two separate script sessions (page load/injection ran twice):
+  - Session 1 (rid `v135wem5xn9i60s`): 05:33:10 → 05:33:14, ran only W1 (compile 3483ms, totalTime 3500), then nothing more — the session ended after W1 (no W2+). 
+  - Session 2 (rid `v135www92xv7gja`): 05:33:15 → 05:34:04, ran the full W1→W6→DONE sequence.
+- So the "final outcome" for each endpoint is from session 2 (the complete run). W1 final = 3455ms. This matches the task's stated numbers (W1 3455, W2 3439, W6 3619/11663).
+- Session 1 died after W1 — possibly the first page was replaced/re-pressed, or it was a warm-up that got interrupted. Worth one line in report + handoff.
+
+Everything is now gathered. Update todos and write the report.
+
+Report file: /home/violence/Work/ps5-lan-research/ps5-webkit-remote-loader/p135-beacon-check-dsh-report.md
+
+Contents (concise but complete):
+
+# p135 Beacon Audit — 2026-10-17 05:33–05:34 run
+
+## 0. Scope & method
+- Files: host-beacons.log (appended history; read-only), p135-overflow-worker.js.
+- Filter: path startswith /beacon/V135W. 60 raw rows.
+- Dedupe rule: key=(path,body). Every POST fires twice by design (beacon() at p135-overflow-worker.js:24–25: sendBeacon + keepalive fetch). 30 unique pairs, each exactly 2 rows → dedupe validated, no orphans.
+- Two script sessions observed (two rids). Session A (rid v135wem5xn9i60s) 05:33:10–05:33:14: L + W1 only (compile 3483). Session B (rid v135www92xv7gja) 05:33:15–05:34:04: full W1–W6 + DONE. Final outcomes = session B.
+
+## 1. Per-endpoint results (deduped)
+Table: endpoint | outcome | fields.
+Include exact JSON bodies:
+- V135W-L: `probe135-start` (fired twice, once per session: 05:33:10, 05:33:15)
+- W1: two runs; final: {"test":"W1-PARAM-20M-COMPILE","start":1792233199270,"stringDone":{"len":80000000,"ms":0},"compileDone":{"ms":3455},"workerResult":{"compiled":true,"compileMs":3455},"survived":true,"totalTime":3460}  (first run: compileMs 3483, totalTime 3500)
+- W2: {"test":"W2-NOPARAM-20M-COMPILE","start":1792233207737,"stringDone":{"len":80000000,"ms":0},"compileDone":{"ms":3439},"workerResult":{"compiled":true,"noParam":true,"compileMs":3439},"survived":true,"totalTime":3443}
+- W3: {"test":"W3-PARAM-20M-CALL","crashed":true,"errorMsg":"SyntaxError: Return statements are only valid inside functions.","errorLine":25,"totalTime":7}
+- W4: {"test":"W4-NOPARAM-20M-CALL","crashed":true,"errorMsg":"SyntaxError: Return statements are only valid inside functions.","errorLine":19,"totalTime":4}
+- W5: {"test":"W5-NOPARAM-15M-CALL","crashed":true,"errorMsg":"SyntaxError: Return statements are only valid inside functions.","errorLine":18,"totalTime":3}
+- W6: {"test":"W6-TEXTDEC-22M","start":1792233231245,"bufferFilled":{"len":90000000,"ms":8006},"decoded":{"srcLen":90000000,"ms":33},"compiled":{"ms":3619},"workerResult":{"compiled":true,"n":22500000,"fillMs":8006,"decodeMs":33,"compileMs":3619},"survived":true,"totalTime":11663}
+- V135W-DONE: `all-6` 05:34:04.
+
+Note: W3/W4/W5 have PRE + final only; zero -PROG rows (no 'start' progress message) → script never executed.
+
+## 2. Harness bug verification — CONFIRMED
+- File: p135-overflow-worker.js. Template literal starts: W1:86, W2:103, W3:121, W4:158, W5:186, W6:213 (backtick lines).
+- Every template's first content character is a newline → content line 1 is empty; content line = file line − S + 1 where S = backtick line.
+- Bare `return;` occurrences (verified by string extraction + count):
+  - W3: file lines 145 & 148 → content lines 25 & 28 → first = 25 = beacon errorLine 25 ✓
+  - W4: file line 176 → content line 19 = beacon 19 ✓
+  - W5: file line 203 → content line 18 = beacon 18 ✓
+  - W1, W2, W6: zero bare returns ✓
+- Independent cross-check: each template extracted verbatim and parsed with Node `vm.Script` (classic-script parsing, same semantics as Worker): W1/W2/W6 PARSE_OK; W3/W4/W5 SyntaxError "Illegal return statement" (V8 wording; JSC/WebKit wording = the beacon's exact message).
+- Why the crashes are parse-time, not OOB: worker totalTime 3–7 ms; no -PROG beacons; errorLine points exactly at the first bare `return;`. The worker script fails to parse as a whole → NOTHING in W3/W4/W5 executed — neither the 20M/15M compile NOR the CALL/link phase.
+- W6 worked because its template has no bare top-level return.
+
+## 3. Interpretation
+- Compile-phase negative on PS5 14.10: W1 3455ms, W2 3439ms, W6 compileMs 3619 (22.5M 'a();' = 90 MB source) all survived. → 20–22.5M 'a();' compilation does NOT overflow.
+- Consistent with header claim (p135-overflow-worker.js lines 1–17): "The overflow happens at FIRST CALL (link time), not compile time."
+- CRITICAL: NO successful call/link test exists yet for p135. W3/W4/W5 are void due to the harness bug — they are NOT a PS5 finding. Nothing is learned about call-time behavior from this run's W3/W4/W5.
+
+## 4. V136 check — CONFIRMED ZERO
+- `"path": "/beacon/V136` → 0 rows. No row contains "V136" at all.
+- p136 files exist (p136-blob-overflow.js uses prefix V136B-, p136-jit-detect.js) → built but not pressed. Also 0 V135F rows (p135-overflow-freevar.js never ran on console in this window).
+- Non-confusion note: /beacon/A0–A3, /beacon/B0–B3, /beacon/L/<rid> rows at 05:34:51–52 with UA "X11; Linux x86_64" are a DESKTOP browser (not the PS5, whose UA is "PlayStation; PlayStation 5/14.10"); source not in this tree.
+
+## 5. Minimal patch (for future p137/re-run)
+IIFE wrap for W3/W4/W5 templates only. Show diff. Then state why IIFE > structured control flow (safer given crash-isolation intent).
+- Diff (unified style against current file):
+
+```diff
+--- a/p135-overflow-worker.js (current, unmodified)
++++ b/p135-overflow-worker.js (proposed p137 re-run)
+@@ W3_CODE: after line 121, before line 154 @@
+ var W3_CODE=`
++(function(){
+ self.postMessage({type:'progress',phase:'start',value:Date.now()});
+ ...
+ }catch(e){
+   self.postMessage({type:'done',value:{err:e.constructor.name+':'+String(e.message||'').slice(0,80)}});
+ }
++})();
+ `;
+@@ W4_CODE: after line 158, before line 182 @@
+ var W4_CODE=`
++(function(){
+ ...
++})();
+ `;
+@@ W5_CODE: after line 186, before line 209 @@
+ var W5_CODE=`
++(function(){
+ ...
++})();
+ `;
+```
+
+Actually, I'll write it as precise hunks with the exact insertion lines:
+
+W3: insert `(function(){` as new line immediately after line 121 (`var W3_CODE=` + backtick) — i.e. the first content line of the template; insert `})();` immediately before line 154 (the closing `` `; ``). Same pattern for W4 (after 158, before 182) and W5 (after 186, before 209).
+
+Why IIFE is safer:
+1. Zero logic changes; early-exit (return-in-catch) semantics preserved exactly. The if/else restructure alternative must also move the success-path postMessage (W3 file line 150, W4 178, W5 205) into an else/flag, otherwise error paths double-post 'done' — more diff, more regression risk.
+2. Crash isolation unaffected: the OOB target is the fn() CALL/link inside the worker process; a real crash kills the worker process regardless of JS wrapping; main thread still sees onerror and beacons. postMessage works from inside the IIFE (self is worker global).
+3. var declarations become IIFE-scoped (cleaner, no change in behavior).
+4. Cheap pre-press regression gate: parse each patched template with new vm.Script(code) locally; expect zero SyntaxErrors. NOTE: after the wrap, any future syntax-error line numbers shift (+1 at minimum) — don't reuse the old 25/19/18 offsets.
+
+## 6. Handoff for GLM (parallel auditor)
+1–8 list as above.
+
+## 7. Redaction & integrity
+- Origin IP in the log replaced by <PS5-LAN> in this report (AGENTS.md redaction rule; GLM handoff must stay redacted).
+- No files modified during this audit; host-beacons.log and p135-overflow-worker.js untouched (append-only history rule). Only this report written.
+
+Wait — one more check: I should double check the W4's totalTime=4 and W5 totalTime=3 — yes from parse. And W3 totalTime=7.
+
+Also double check the "file lines" of returns: read tool showed 145/148/176/203. My corrected script: W3 returns at file lines 145 and 148 (the second scan had off-by-one; the string-extraction script computed content lines 25, 28 / 19 / 18 which are consistent with file lines 145,148,176,203 given S=121,158,186: content = f − S + 1: 145−121+1=25 ✓, 148−121+1=28 ✓, 176−158+1=19 ✓, 203−186+1=18 ✓.) Good — consistent with the read tool and the task's "approx lines 145, 148, 176, 203".
+
+Also W1 first-run numbers: session A compileMs=3483, totalTime=3500. In the report I'll note run A briefly.
+
+Let me also double-check there's no existing p135-beacon-check-dsh-report.md to overwrite (write tool would fail per policy if exists? It says read before overwrite — check existence first). glob for it.
+
+Now write the report.
+dsh: reasoning:
+Report written. Now mark todos complete and print the compact summary.
+Report written to `p135-beacon-check-dsh-report.md`. Compact summary:
+
+## 1) Beacon log
+60 raw `/beacon/V135W-*` rows → **30 unique (path,body) pairs, each exactly 2×** (sendBeacon + keepalive fetch). Two script sessions (two rids): A = 05:33:10–14 (W1 only, then silence), B = 05:33:15–05:34:04 (full run). Final outcomes (session B):
+
+| Test | Result |
+|---|---|
+| W1-PARAM-20M-COMPILE | survived, compileMs=**3455**, totalTime 3460 (session A also survived: 3483) |
+| W2-NOPARAM-20M-COMPILE | survived, compileMs=**3439**, totalTime 3443 |
+| W3-PARAM-20M-CALL | crashed, SyntaxError *"Return statements are only valid inside functions."*, errorLine **25**, totalTime 7 |
+| W4-NOPARAM-20M-CALL | same error, errorLine **19**, totalTime 4 |
+| W5-NOPARAM-15M-CALL | same error, errorLine **18**, totalTime 3 |
+| W6-TEXTDEC-22M | survived, compileMs=**3619**, totalTime=**11663** |
+| V135W-DONE | `all-6` 05:34:04 |
+
+## 2) Harness bug — CONFIRMED
+Bare top-level `return;` at file lines **145, 148** (W3), **176** (W4), **203** (W5) — exactly as hypothesized. Because each template starts with a leading newline, content-line = file-line − backtick-line + 1: W3→**25**✓, W4→**19**✓, W5→**18**✓ — all three match the beacon errorLines exactly. Cross-check: `vm.Script` (classic-script parse, same as Worker) fails W3/W4/W5 with SyntaxError, passes W1/W2/W6. W3/W4/W5 emitted **zero PROG beacons** → the compile AND CALL/link phases never ran. W6 has no bare return — that's why it worked.
+
+## 3) Interpretation
+20–22.5M `'a();'` compilation does NOT overflow on PS5 14.10 (W1 3455, W2 3439, W6 3619 ms) — consistent with the "overflow at CALL/link time" claim. **No successful call/link test exists for p135: W3/W4/W5 are void due to the harness bug, NOT a PS5 finding.**
+
+## 4) V136
+**Zero** `/beacon/V136*` rows (p136's prefix would be `V136B-`). Built, not pressed. Also 0 `V135F` rows.
+
+## 5) Patch
+Wrap W3/W4/W5 template bodies in `(function(){ … })();` (2-line diff each, full text in report). **IIFE wrap is safer** than restructuring the returns: zero logic changes, identical early-exit semantics, process-level crash isolation untouched, and `postMessage` still works from inside.
+
+## 6) Handoff (GLM)
+Re-derive dedupe; explain the two-session anomaly; check W6 arithmetic; independently confirm p136/p137-not-pressed; attribute the desktop-UA `/beacon/A*/B*/L/<rid>` rows at 05:34:51–52 (Linux browser, not the console); run the post-patch `vm.Script` gate; treat reaching the `calling` PROG beacon as the next run's success signal; decide if `p135-overflow-freevar.js` still needs a run.
