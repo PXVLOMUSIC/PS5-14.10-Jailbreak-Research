@@ -32,7 +32,7 @@ say('V576 mode='+MODE+' saves='+NSAVES+' spray='+NSPRAY);
 say('Vector cap='+vcap+' bufA='+BUF_A+' bufB='+BUF_B+' target='+BUFSIZE);
 
 /* ===== UAF with external stateStack =====
-   Key insight: lineWidth getter path is ALL non-virtual:
+   Key insight (Opus 5.5 analysis): lineWidth getter path is ALL non-virtual:
      wrapped() → impl.lineWidth() → state() → m_stateStack.last()
    state() = m_stateStack.last() = m_buffer[m_size-1].lineWidth
    None of this touches vtable at +0.
