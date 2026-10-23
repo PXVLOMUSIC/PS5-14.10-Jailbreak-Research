@@ -10,9 +10,9 @@ This project runs on AI compute — multiple frontier models working in parallel
 
 | Method | Link |
 |--------|------|
-| PayPal | `<!-- ADD YOUR PAYPAL LINK -->` |
-| Ko-fi | `<!-- ADD YOUR KO-FI LINK -->` |
-| BTC | `<!-- ADD YOUR BTC ADDRESS -->` |
+| PayPal | [paypal.me/arnoldzap](https://paypal.me/arnoldzap) |
+| BTC | `bc1qw2lpq8p0cspdk9dlddv6y0wswh6z6svtjjkn73` |
+| SOL | `BftaLxgQvgn9WN1YXTJePeUPWzJK5whMnFRVQ8EdLzvv` |
 
 Every contribution helps keep the models running and the research moving forward. Thank you!
 
@@ -288,7 +288,7 @@ This research was built with multiple LLMs working together.
 
 ## Contact
 
-X: [@Arn0Stride7](https://x.com/Arn0Stride7)
+**X: [@Arn0Stride7](https://x.com/Arn0Stride7)** — primary contact
 
 ## License
 
