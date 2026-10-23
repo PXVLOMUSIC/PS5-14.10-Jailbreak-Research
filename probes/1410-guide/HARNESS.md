@@ -16,7 +16,7 @@ Components (rig side, ~150 lines total):
   (GET-logged server-side; each message tripled for loss tolerance). Works
   even when later JS dies — no fetch/CORS/PNA issues in this webview.
 - Crash-resume: canvas-class deaths exit the whole Guide app; a watchdog
-  relaunches the Guide (chiaki-ng input lane + uinput) and the page reloads
+  relaunches the Guide (remote input lane + uinput) and the page reloads
   from the same URL, picking up where the flag file left it.
 - Remote input lane for manual sessions: `ps5_key <keysym>` (Return=Cross,
   C=Circle which also reloads the page, arrows=D-pad, Esc=PS, T=touchpad).

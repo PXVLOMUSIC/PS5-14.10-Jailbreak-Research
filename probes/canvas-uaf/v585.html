@@ -375,7 +375,7 @@ if (aliasOK) {
   if (typeof FontFace !== 'undefined') {
     try {
       /* Create FontFace pointing to our server — forces allocation of font data structures */
-      var ff = new FontFace('ProbeFont', 'url(http://10.0.0.1:8080/probe-font.woff2)');
+      var ff = new FontFace('ProbeFont', 'url(http://'+location.hostname+':8080/probe-font.woff2)');
       ff.load().then(function() {
         bk('P8-FONT-LOADED', 'YES');
         say('Font loaded!');

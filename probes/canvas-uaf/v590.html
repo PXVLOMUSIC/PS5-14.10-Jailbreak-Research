@@ -216,7 +216,7 @@ function testControlValue(val, idx) {
 }
 
 // Connect WS then run
-ws = new WebSocket('ws://10.0.0.1:9090');
+ws = new WebSocket('ws://'+location.hostname+':9090');
 ws.onopen = function() {
   beacon({phase:'P0',tag:'ws',ok:true,msg:'connected'});
   setTimeout(run, 100);

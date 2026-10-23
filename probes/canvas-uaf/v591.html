@@ -73,7 +73,7 @@ function scanPtrs(buf,label){
 }
 
 try{
-  var ws=new WebSocket('ws://10.0.0.1:9090/v591');
+  var ws=new WebSocket('ws://'+location.hostname+':9090/v591');
   ws.binaryType='arraybuffer';
   bk('WS-CREATE','ok');
 
