@@ -312,6 +312,22 @@ We have full R/W of typed Canvas2D state fields, but **no path to read a raw hea
 | V627 | Groomed freed-memory read | CRASH (destructor nulls m_buffer) |
 | V632 | Two-stage zero-alloc read | Stage 1 pass, Stage 2 pending |
 | V641 | DontInitialize AB paths | All return zeros |
+| V650 | Linear heap scan (2MB steps) | All 0x310M targets crashed (sparse heap) |
+| V651 | AB zero-init + setLineDash + gradient | Confirmed: AB always zeroed, lineDash/gradient work |
+| V652 | Stride scan (2MB, 0x300M-0x320M) | All targets unmapped — sparse page commit |
+| V653 | Fast scan (64MB jumps, code-first) | 0x60M-0xA0M all crashed |
+| V654 | Targeted scan (ZigZag intel, 1MB steps) | Heap range 0x310500000-0x311000000 |
+| V655 | **Binary subdivision scanner** | Start/mid/end → quarters → eighths, ~187KB resolution over 24MB |
+
+### Crash Oracle & Heap Topology Mapping (V650–V655)
+
+The crash oracle forges `m_stateStack.m_buffer` to a target address and reads `lineWidth` — if the page is mapped, it returns 8 bytes of data; if unmapped, the process SIGSEGV-crashes and the PS5 browser reloads.
+
+**Binary subdivision algorithm (V655):** Probes start, end, and midpoint of the search range first, then fills quarter-points, eighth-points, etc. This maps a 24MB range at ~187KB resolution in ~129 probes. Each probe that survives also reads `miterLimit`, `globalAlpha`, `shadowBlur`, and a +0x1000 offset for maximum data extraction per non-crashing read.
+
+**Key finding — sparse heap:** The PS5 allocator (libpas on FreeBSD) uses `PROT_NONE` reservation with `MAP_FIXED` commit. Crashing at an address does NOT mean the heap isn't in that range — it means that specific page isn't committed. Heap pages are committed on demand in 16KB blocks.
+
+Memory layout intelligence from [ZigZagBoi1's PS5 14.10 research](https://github.com/ZigZagBoi1/PS5-14.10-Research) (317-region VM map via syscall 674) confirmed `SceLibcHeap` at `0x310744000+` and heap objects at `0x3105AF000–0x31071E000` — a small lamp in the darkness of working without direct memory introspection.
 
 ## Secondary Path: CVE-2023-42890
 
@@ -340,7 +356,8 @@ NetworkLoad object is ~1024 or 2048 bytes in bmalloc. `m_redirectCompletionHandl
 | CVE triage (2023-2026) | Done — all dead except CVE-2026-43720 |
 | PLATFORM(PLAYSTATION) audit | Done — logging only, no safety gaps |
 | WebKit entry bug (CVE-2026-43720) | **CONFIRMED** — UAF + same-type reclaim + full R/W |
-| Info leak primitive | **BLOCKED** — 10 paths exhausted, need heap pointer |
+| Info leak primitive | **IN PROGRESS** — crash oracle scanning heap topology (V655) |
+| Heap topology mapping | **IN PROGRESS** — binary subdivision scanner running on device |
 | Arbitrary R/W | Designed (lineDash Vector forge) — needs info leak |
 | Kernel exploit | BLOCKED — no browser code execution |
 | Privilege escalation | Not started |
