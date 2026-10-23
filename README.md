@@ -4,6 +4,18 @@ WebKit memory safety research for PlayStation 5 firmware 14.10. All data comes f
 
 > **Disclaimer:** Authorized security research on personally owned hardware. For educational and research purposes only.
 
+## Support This Research
+
+This project runs on AI compute — multiple frontier models working in parallel around the clock. If this research is useful to you, please consider supporting it:
+
+| Method | Link |
+|--------|------|
+| PayPal | `<!-- ADD YOUR PAYPAL LINK -->` |
+| Ko-fi | `<!-- ADD YOUR KO-FI LINK -->` |
+| BTC | `<!-- ADD YOUR BTC ADDRESS -->` |
+
+Every contribution helps keep the models running and the research moving forward. Thank you!
+
 ## Target
 
 Validated on device (p163, V399, V520, V521).
