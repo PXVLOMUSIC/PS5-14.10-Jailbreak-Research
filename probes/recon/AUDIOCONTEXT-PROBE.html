@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AUDIOCONTEXT-PROBE: Is AudioContext available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>AUDIOCONTEXT-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing AudioContext availability on 14.0...");
+L("");
+
+L("AudioContext: " + (typeof AudioContext));
+L("webkitAudioContext: " + (typeof webkitAudioContext));
+L("OfflineAudioContext: " + (typeof OfflineAudioContext));
+
+try {
+  const ac = new AudioContext();
+  L("AudioContext created: OK");
+  L("sampleRate: " + ac.sampleRate);
+  L("state: " + ac.state);
+} catch (e) {
+  L("AudioContext failed: " + e.message);
+  L("→ AudioContext not available on 14.0");
+}
+
+L("");
+L("Conclusion: AudioContext is " + (typeof AudioContext !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY

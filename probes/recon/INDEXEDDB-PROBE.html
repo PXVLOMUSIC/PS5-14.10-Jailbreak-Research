@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>INDEXEDDB-PROBE: Is IndexedDB available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>INDEXEDDB-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing IndexedDB availability on 14.0...");
+L("");
+
+L("indexedDB: " + (typeof indexedDB));
+L("IDBFactory: " + (typeof IDBFactory));
+L("IDBDatabase: " + (typeof IDBDatabase));
+
+try {
+  const req = indexedDB.open('test', 1);
+  req.onsuccess = function(e) {
+    L("IndexedDB open: OK");
+    const db = e.target.result;
+    L("DB name: " + db.name);
+    db.close();
+  };
+  req.onerror = function(e) {
+    L("IndexedDB open error: " + e.target.error);
+  };
+} catch (e) {
+  L("IndexedDB failed: " + e.message);
+  L("→ IndexedDB not available on 14.0");
+}
+
+L("");
+L("Conclusion: IndexedDB is " + (typeof indexedDB !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
