@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WEBGL-PROBE: Is WebGL available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>WEBGL-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing WebGL availability on 14.0...");
+L("");
+
+L("WebGLRenderingContext: " + (typeof WebGLRenderingContext));
+L("WebGL2RenderingContext: " + (typeof WebGL2RenderingContext));
+
+const canvas = document.createElement('canvas');
+L("WebGL context: " + (canvas.getContext('webgl') ? "OK" : "FAIL"));
+L("WebGL2 context: " + (canvas.getContext('webgl2') ? "OK" : "FAIL"));
+
+L("");
+L("Conclusion: WebGL is " + (typeof WebGLRenderingContext !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OFFSCREENCANVAS-PROBE: Is OffscreenCanvas available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>OFFSCREENCANVAS-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing OffscreenCanvas availability on 14.0...");
+L("");
+
+L("OffscreenCanvas: " + (typeof OffscreenCanvas));
+L("OffscreenCanvasRenderingContext2D: " + (typeof OffscreenCanvasRenderingContext2D));
+
+try {
+  const oc = new OffscreenCanvas(100, 100);
+  L("OffscreenCanvas created: OK");
+  const ctx = oc.getContext('2d');
+  L("OffscreenCanvas 2d context: " + (ctx ? "OK" : "FAIL"));
+} catch (e) {
+  L("OffscreenCanvas failed: " + e.message);
+  L("→ OffscreenCanvas not available on 14.0");
+}
+
+L("");
+L("Conclusion: OffscreenCanvas is " + (typeof OffscreenCanvas !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
