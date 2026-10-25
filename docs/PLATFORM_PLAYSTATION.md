@@ -11,7 +11,9 @@ Analysis of all Sony-specific code paths in the WebKit-1400 source, identified b
 | Stricter than Upstream | 3 | Positive |
 | Weaker than Upstream | 1 | Reporting only |
 | Post-exploitation Primitive | 1 | Not an entry bug |
-| **Total** | **22** | **0 exploitable entry bugs** |
+| **Total (source-audited guards)** | **22** | **0 exploitable entry bugs** |
+
+> **Note:** A broader source analysis found 47 `PLATFORM(PLAYSTATION)` guard lines across 31 files (see `PLATFORM_PLAYSTATION_GUARDS.md`). The 22 guards documented here are the WebCore-level guards. The additional 25 guards are in bmalloc/libpas/JSC internals. Two of the 47 have security relevance: `VM.cpp:395` (JSC Config unfrozen) and `BAssert.h:35` (release assertions OFF).
 
 ## Detailed Analysis
 
