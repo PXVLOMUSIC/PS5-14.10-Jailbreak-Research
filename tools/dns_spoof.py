@@ -76,6 +76,10 @@ class DNSHandler(socketserver.BaseRequestHandler):
 class DNSServer(socketserver.ThreadingUDPServer):
     allow_reuse_address = True
 
+    def __init__(self, server_address, target, ip):
+        self.target = target
+        self.ip = ip
+        super().__init__(server_address, DNSHandler)
 def main():
     parser = argparse.ArgumentParser(description="Standalone DNS spoofer for PS5")
     parser.add_argument("--ip", required=True, help="Your PC's IP (e.g., 192.168.1.135)")
@@ -83,9 +87,7 @@ def main():
     parser.add_argument("--port", type=int, default=53, help="DNS port (default: 53)")
     args = parser.parse_args()
 
-    server = DNSServer(("0.0.0.0", args.port), None, None, None)
-    server.target = args.target
-    server.ip = args.ip
+    server = DNSServer(("0.0.0.0", args.port), args.target, args.ip)
     print(f"DNS spoofer running on port {args.port}")
     print(f"Spoofing {args.target} -> {args.ip}")
     print("All other domains -> NXDOMAIN (blocks PSN and updates)")
