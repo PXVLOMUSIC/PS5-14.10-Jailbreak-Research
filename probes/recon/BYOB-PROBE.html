@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BYOB-PROBE: Is BYOB available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>BYOB-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing BYOB (ReadableByteStream) availability on 14.0...");
+L("");
+
+// Check 1: ReadableStreamBYOBReader
+L("ReadableStreamBYOBReader: " + (typeof ReadableStreamBYOBReader));
+L("ReadableByteStreamController: " + (typeof ReadableByteStreamController));
+L("ReadableStreamBYOBRequest: " + (typeof ReadableStreamBYOBRequest));
+
+// Check 2: Try to create a byte stream
+try {
+  const rs = new ReadableStream({ type: 'bytes' });
+  L("ReadableStream type:bytes: OK (BYOB available)");
+  const reader = rs.getReader({ mode: 'byob' });
+  L("BYOB reader: OK");
+} catch (e) {
+  L("ReadableStream type:bytes failed: " + e.message);
+  L("→ BYOB not available on 14.0");
+}
+
+// Check 3: Check for ReadableStream constructor options
+try {
+  const rs = new ReadableStream({});
+  L("ReadableStream default: OK");
+  L("rs.locked: " + rs.locked);
+} catch (e) {
+  L("ReadableStream default failed: " + e.message);
+}
+
+// Check 4: Check for TransformStream (available per README)
+L("TransformStream: " + (typeof TransformStream));
+
+L("");
+L("Conclusion: BYOB (type:bytes) is " + 
+  (typeof ReadableStreamBYOBReader !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY

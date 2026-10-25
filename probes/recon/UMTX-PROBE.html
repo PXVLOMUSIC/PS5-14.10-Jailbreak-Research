@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>UMTX-PROBE: Is UMTX stubbed on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>UMTX-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing UMTX availability on 14.0...");
+L("UMTX (CVE-2024-43102) requires shared memory syscalls.");
+L("");
+
+// Check 1: Is SharedArrayBuffer available? (needed for UMTX)
+L("SharedArrayBuffer available: " + (typeof SharedArrayBuffer !== 'undefined'));
+L("Atomics available: " + (typeof Atomics !== 'undefined'));
+
+// Check 2: Try to create a SharedArrayBuffer (should fail on PS5)
+try {
+  const sab = new SharedArrayBuffer(1024);
+  L("SharedArrayBuffer created: OK (UMTX may be possible)");
+} catch (e) {
+  L("SharedArrayBuffer failed: " + e.message);
+  L("→ UMTX likely stubbed (SHM removed on 14.0)");
+}
+
+// Check 3: Try Atomics.wait (requires SAB)
+try {
+  const sab = new SharedArrayBuffer(4);
+  const view = new Int32Array(sab);
+  Atomics.wait(view, 0, 0, 100);
+  L("Atomics.wait: OK");
+} catch (e) {
+  L("Atomics.wait failed: " + e.message);
+}
+
+// Check 4: Check for Sony-specific syscalls via WebAssembly (not available)
+L("WebAssembly available: " + (typeof WebAssembly !== 'undefined'));
+
+L("");
+L("Conclusion: UMTX requires SharedArrayBuffer + shm syscalls.");
+L("On PS5 14.0, SharedArrayBuffer is " + (typeof SharedArrayBuffer !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + ".");
+L("If SAB is unavailable, UMTX is effectively stubbed.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
