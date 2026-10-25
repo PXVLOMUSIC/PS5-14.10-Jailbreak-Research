@@ -66,7 +66,9 @@ class DNSHandler(socketserver.BaseRequestHandler):
         qid, question_bytes, name = parsed
         target = self.server.target
         ip = self.server.ip
-        if name == target:
+        # Spoof multiple domains: the target + common PS5 domains
+        spoofed = {target, "ecode.np.cs.playstation.net", "manuals.playstation.net"}
+        if name in spoofed:
             print(f"[DNS] {name} -> {ip}")
             sock.sendto(build_response(qid, question_bytes, ip), self.client_address)
         else:
