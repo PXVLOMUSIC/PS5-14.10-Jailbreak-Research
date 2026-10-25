@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WEBRTC-PROBE: Is WebRTC available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>WEBRTC-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing WebRTC availability on 14.0...");
+L("");
+
+L("RTCPeerConnection: " + (typeof RTCPeerConnection));
+L("webkitRTCPeerConnection: " + (typeof webkitRTCPeerConnection));
+L("RTCDataChannel: " + (typeof RTCDataChannel));
+
+try {
+  const pc = new RTCPeerConnection();
+  L("RTCPeerConnection created: OK");
+  L("connectionState: " + pc.connectionState);
+  pc.close();
+} catch (e) {
+  L("RTCPeerConnection failed: " + e.message);
+  L("→ WebRTC not available on 14.0");
+}
+
+L("");
+L("Conclusion: WebRTC is " + (typeof RTCPeerConnection !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY

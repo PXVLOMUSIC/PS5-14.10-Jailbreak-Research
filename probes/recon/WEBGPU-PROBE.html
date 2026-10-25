@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WEBGPU-PROBE: Is WebGPU available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>WEBGPU-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing WebGPU availability on 14.0...");
+L("");
+
+L("navigator.gpu: " + (typeof navigator.gpu));
+L("GPU: " + (typeof GPU));
+L("GPUDevice: " + (typeof GPUDevice));
+
+try {
+  if (navigator.gpu) {
+    navigator.gpu.requestAdapter().then(function(adapter) {
+      L("WebGPU adapter: " + (adapter ? "OK" : "FAIL"));
+    }).catch(function(e) {
+      L("WebGPU requestAdapter failed: " + e.message);
+    });
+  } else {
+    L("navigator.gpu is undefined → WebGPU not available");
+  }
+} catch (e) {
+  L("WebGPU failed: " + e.message);
+  L("→ WebGPU not available on 14.0");
+}
+
+L("");
+L("Conclusion: WebGPU is " + (typeof navigator.gpu !== 'undefined' ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY

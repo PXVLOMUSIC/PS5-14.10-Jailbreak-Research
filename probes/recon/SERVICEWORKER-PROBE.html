@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SERVICEWORKER-PROBE: Is ServiceWorker available on 14.0?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>SERVICEWORKER-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing ServiceWorker availability on 14.0...");
+L("");
+
+L("serviceWorker in navigator: " + ('serviceWorker' in navigator));
+L("ServiceWorker: " + (typeof ServiceWorker));
+L("ServiceWorkerRegistration: " + (typeof ServiceWorkerRegistration));
+
+try {
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    L("ServiceWorker register: OK");
+    L("scope: " + reg.scope);
+  }).catch(function(e) {
+    L("ServiceWorker register failed: " + e.message);
+  });
+} catch (e) {
+  L("ServiceWorker register threw: " + e.message);
+  L("→ ServiceWorker not available on 14.0");
+}
+
+L("");
+L("Conclusion: ServiceWorker is " + ('serviceWorker' in navigator ? "AVAILABLE" : "NOT AVAILABLE") + " on this console.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
