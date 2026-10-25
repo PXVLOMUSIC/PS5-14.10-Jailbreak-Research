@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GIGACAGE-PROBE: Is Gigacage enabled?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>GIGACAGE-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing Gigacage availability...");
+
+// Check 1: Is there a global Gigacage object?
+L("window.Gigacage = " + (typeof window.Gigacage));
+L("window.gigacage = " + (typeof window.gigacage));
+
+// Check 2: ArrayBuffer allocation behavior
+// If Gigacage is enabled, large ArrayBuffers may be allocated in a separate cage.
+// We can't directly verify, but we can check if the browser exposes any gigacage-related APIs.
+try {
+  const ab = new ArrayBuffer(1024 * 1024);
+  const view = new Uint8Array(ab);
+  L("ArrayBuffer 1MB allocated OK");
+  L("byteLength = " + ab.byteLength);
+} catch (e) {
+  L("ArrayBuffer alloc failed: " + e);
+}
+
+// Check 3: Check for JSC-specific globals
+L("typeof JSC = " + (typeof JSC));
+L("typeof $vm = " + (typeof $vm));
+
+// Check 4: Try to detect if typed arrays are gigacaged by checking
+// if a large allocation succeeds without OOM.
+try {
+  const big = new ArrayBuffer(256 * 1024 * 1024);
+  L("Large ArrayBuffer 256MB allocated OK (gigacage may be disabled or large)");
+} catch (e) {
+  L("Large ArrayBuffer 256MB failed: " + e);
+}
+
+L("Probe complete. Gigacage status cannot be determined from JS alone.");
+L("Use arb-read primitive to check if AB backing store is in a separate address range.");
+</script>
+</body>
+</html>
+PY

