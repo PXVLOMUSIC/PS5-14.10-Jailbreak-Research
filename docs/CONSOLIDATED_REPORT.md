@@ -1,383 +1,150 @@
 ================================================================================
-CONSOLIDATED AUDIT REPORT — PS5 Jailbreak Research
-Generated: 2026-10-25T18:32:50.857193
+CONSOLIDATED AUDIT REPORT v2 — PS5 Jailbreak Research
+Generated: 2026-10-25T18:39:53.520769
 ================================================================================
 
 ----------------------------------------
-1. CLAIM AUDIT (tools/claim_audit.py)
+1. CLAIM AUDIT (tools/claim_audit.py v2)
 ----------------------------------------
-=== CLAIM AUDIT ===
+============================================================
+ENHANCED CLAIM AUDIT v2
+============================================================
 Result files scanned: 5
-V-refs found in docs: 370
-V-refs WITHOUT evidence in results/: 356
-  - docs\API_FINGERPRINT.md: V399
-  - docs\API_FINGERPRINT.md: V520
-  - docs\API_FINGERPRINT.md: V521
-  - docs\AUDIT_REPORT.md: V415
-  - docs\AUDIT_REPORT.md: V429
-  - docs\AUDIT_REPORT.md: V430
-  - docs\AUDIT_REPORT.md: V432
-  - docs\AUDIT_REPORT.md: V460
-  - docs\AUDIT_REPORT.md: V461
-  - docs\AUDIT_REPORT.md: V527
-  - docs\AUDIT_REPORT.md: V548
-  - docs\AUDIT_REPORT.md: V550
-  - docs\AUDIT_REPORT.md: V562
-  - docs\AUDIT_REPORT.md: V573
-  - docs\AUDIT_REPORT.md: V589
-  - docs\AUDIT_REPORT.md: V630
-  - docs\AUDIT_REPORT.md: V632
-  - docs\AUDIT_REPORT.md: V641
-  - docs\CONFIRMED_VULNS.md: V460
-  - docs\CONFIRMED_VULNS.md: V461
-  - docs\CONFIRMED_VULNS.md: V527
-  - docs\CONFIRMED_VULNS.md: V527
-  - docs\CONFIRMED_VULNS.md: V548
-  - docs\CONFIRMED_VULNS.md: V550
-  - docs\CONFIRMED_VULNS.md: V562
-  - docs\CONFIRMED_VULNS.md: V573
-  - docs\CONFIRMED_VULNS.md: V589
-  - docs\CONFIRMED_VULNS.md: V630
-  - docs\CONFIRMED_VULNS.md: V632
-  - docs\CONFIRMED_VULNS.md: V641
-  - docs\CONFIRMED_VULNS.md: V432
-  - docs\CONFIRMED_VULNS.md: V430
-  - docs\CONFIRMED_VULNS.md: V432
-  - docs\CONFIRMED_VULNS.md: V432
-  - docs\CONFIRMED_VULNS.md: V429
-  - docs\CONFIRMED_VULNS.md: V429
-  - docs\CONFIRMED_VULNS.md: V415
-  - docs\CONSOLIDATED_REPORT.md: V399
-  - docs\CONSOLIDATED_REPORT.md: V520
-  - docs\CONSOLIDATED_REPORT.md: V521
-  - docs\CONSOLIDATED_REPORT.md: V415
-  - docs\CONSOLIDATED_REPORT.md: V429
-  - docs\CONSOLIDATED_REPORT.md: V430
-  - docs\CONSOLIDATED_REPORT.md: V432
-  - docs\CONSOLIDATED_REPORT.md: V460
-  - docs\CONSOLIDATED_REPORT.md: V461
-  - docs\CONSOLIDATED_REPORT.md: V527
-  - docs\CONSOLIDATED_REPORT.md: V548
-  - docs\CONSOLIDATED_REPORT.md: V550
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V632
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V460
-  - docs\CONSOLIDATED_REPORT.md: V461
-  - docs\CONSOLIDATED_REPORT.md: V527
-  - docs\CONSOLIDATED_REPORT.md: V527
-  - docs\CONSOLIDATED_REPORT.md: V548
-  - docs\CONSOLIDATED_REPORT.md: V550
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V632
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V432
-  - docs\CONSOLIDATED_REPORT.md: V430
-  - docs\CONSOLIDATED_REPORT.md: V432
-  - docs\CONSOLIDATED_REPORT.md: V432
-  - docs\CONSOLIDATED_REPORT.md: V429
-  - docs\CONSOLIDATED_REPORT.md: V429
-  - docs\CONSOLIDATED_REPORT.md: V415
-  - docs\CONSOLIDATED_REPORT.md: V240
-  - docs\CONSOLIDATED_REPORT.md: V241
-  - docs\CONSOLIDATED_REPORT.md: V422
-  - docs\CONSOLIDATED_REPORT.md: V287
-  - docs\CONSOLIDATED_REPORT.md: V330
-  - docs\CONSOLIDATED_REPORT.md: V345
-  - docs\CONSOLIDATED_REPORT.md: V438
-  - docs\CONSOLIDATED_REPORT.md: V416
-  - docs\CONSOLIDATED_REPORT.md: V418
-  - docs\CONSOLIDATED_REPORT.md: V419
-  - docs\CONSOLIDATED_REPORT.md: V405
-  - docs\CONSOLIDATED_REPORT.md: V260
-  - docs\CONSOLIDATED_REPORT.md: V400
-  - docs\CONSOLIDATED_REPORT.md: V402
-  - docs\CONSOLIDATED_REPORT.md: V588
-  - docs\CONSOLIDATED_REPORT.md: V563
-  - docs\CONSOLIDATED_REPORT.md: V566
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V566
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V627
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V180
-  - docs\CONSOLIDATED_REPORT.md: V180
-  - docs\CONSOLIDATED_REPORT.md: V221
-  - docs\CONSOLIDATED_REPORT.md: V243
-  - docs\CONSOLIDATED_REPORT.md: V246
-  - docs\CONSOLIDATED_REPORT.md: V246
-  - docs\CONSOLIDATED_REPORT.md: V221
-  - docs\CONSOLIDATED_REPORT.md: V243
-  - docs\CONSOLIDATED_REPORT.md: V246
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V180
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V587
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V627
-  - docs\CONSOLIDATED_REPORT.md: V641
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V650
-  - docs\CONSOLIDATED_REPORT.md: V655
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V399
-  - docs\CONSOLIDATED_REPORT.md: V520
-  - docs\CONSOLIDATED_REPORT.md: V521
-  - docs\CONSOLIDATED_REPORT.md: V580
-  - docs\CONSOLIDATED_REPORT.md: V583
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V650
-  - docs\CONSOLIDATED_REPORT.md: V655
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V650
-  - docs\CONSOLIDATED_REPORT.md: V655
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V650
-  - docs\CONSOLIDATED_REPORT.md: V655
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V399
-  - docs\CONSOLIDATED_REPORT.md: V520
-  - docs\CONSOLIDATED_REPORT.md: V521
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V650
-  - docs\CONSOLIDATED_REPORT.md: V655
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V260
-  - docs\CONSOLIDATED_REPORT.md: V260
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V460
-  - docs\CONSOLIDATED_REPORT.md: V461
-  - docs\CONSOLIDATED_REPORT.md: V527
-  - docs\CONSOLIDATED_REPORT.md: V527
-  - docs\CONSOLIDATED_REPORT.md: V548
-  - docs\CONSOLIDATED_REPORT.md: V550
-  - docs\CONSOLIDATED_REPORT.md: V562
-  - docs\CONSOLIDATED_REPORT.md: V573
-  - docs\CONSOLIDATED_REPORT.md: V589
-  - docs\CONSOLIDATED_REPORT.md: V630
-  - docs\CONSOLIDATED_REPORT.md: V674
-  - docs\CONSOLIDATED_REPORT.md: V399
-  - docs\CONSOLIDATED_REPORT.md: V432
-  - docs\CONSOLIDATED_REPORT.md: V431
-  - docs\CONSOLIDATED_REPORT.md: V151
-  - docs\CONSOLIDATED_REPORT.md: V220
-  - docs\CONSOLIDATED_REPORT.md: V221
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V240
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V190
-  - docs\CONSOLIDATED_REPORT.md: V180
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\CONSOLIDATED_REPORT.md: V136
-  - docs\CONSOLIDATED_REPORT.md: V137
-  - docs\CONSOLIDATED_REPORT.md: V135
-  - docs\DEAD_ENDS.md: V240
-  - docs\DEAD_ENDS.md: V241
-  - docs\DEAD_ENDS.md: V422
-  - docs\DEAD_ENDS.md: V287
-  - docs\DEAD_ENDS.md: V330
-  - docs\DEAD_ENDS.md: V345
-  - docs\DEAD_ENDS.md: V438
-  - docs\DEAD_ENDS.md: V416
-  - docs\DEAD_ENDS.md: V418
-  - docs\DEAD_ENDS.md: V419
-  - docs\DEAD_ENDS.md: V405
-  - docs\DEAD_ENDS.md: V260
-  - docs\DEAD_ENDS.md: V400
-  - docs\DEAD_ENDS.md: V402
-  - docs\DEAD_ENDS.md: V588
-  - docs\DEAD_ENDS.md: V563
-  - docs\DEAD_ENDS.md: V566
-  - docs\DEAD_ENDS.md: V630
-  - docs\DEAD_ENDS.md: V573
-  - docs\DEAD_ENDS.md: V566
-  - docs\DEAD_ENDS.md: V641
-  - docs\DEAD_ENDS.md: V641
-  - docs\DEAD_ENDS.md: V627
-  - docs\DEAD_ENDS.md: V641
-  - docs\FINDINGS.md: V180
-  - docs\FINDINGS.md: V180
-  - docs\FINDINGS.md: V221
-  - docs\FINDINGS.md: V243
-  - docs\FINDINGS.md: V246
-  - docs\FINDINGS.md: V246
-  - docs\FINDINGS.md: V221
-  - docs\FINDINGS.md: V243
-  - docs\FINDINGS.md: V246
-  - docs\FINDINGS.md: V190
-  - docs\FINDINGS.md: V180
-  - docs\FINDINGS.md: V573
-  - docs\FINDINGS.md: V587
-  - docs\FINDINGS.md: V589
-  - docs\FINDINGS.md: V589
-  - docs\PROBE_INDEX.md: V627
-  - docs\PROBE_INDEX_AUDIT.md: V641
-  - docs\PROGRESS_AUDIT.md: V573
-  - docs\PROGRESS_AUDIT.md: V562
-  - docs\PROGRESS_AUDIT.md: V630
-  - docs\PROGRESS_AUDIT.md: V650
-  - docs\PROGRESS_AUDIT.md: V655
-  - docs\PROGRESS_AUDIT.md: V674
-  - docs\PROGRESS_AUDIT.md: V399
-  - docs\PROGRESS_AUDIT.md: V520
-  - docs\PROGRESS_AUDIT.md: V521
-  - docs\PROGRESS_AUDIT.md: V580
-  - docs\PROGRESS_AUDIT.md: V583
-  - docs\PROGRESS_AUDIT.md: V573
-  - docs\PROGRESS_AUDIT.md: V562
-  - docs\PROGRESS_AUDIT.md: V630
-  - docs\PROGRESS_AUDIT.md: V650
-  - docs\PROGRESS_AUDIT.md: V655
-  - docs\PROGRESS_AUDIT.md: V674
-  - docs\RESEARCH_MAP.md: V589
-  - docs\RESEARCH_MAP.md: V573
-  - docs\RESEARCH_MAP.md: V562
-  - docs\RESEARCH_MAP.md: V630
-  - docs\RESEARCH_MAP.md: V650
-  - docs\RESEARCH_MAP.md: V655
-  - docs\RESEARCH_MAP.md: V573
-  - docs\RESEARCH_MAP.md: V674
-  - docs\RESEARCH_MAP_AUDIT.md: V589
-  - docs\RESEARCH_MAP_AUDIT.md: V573
-  - docs\RESEARCH_MAP_AUDIT.md: V562
-  - docs\RESEARCH_MAP_AUDIT.md: V630
-  - docs\RESEARCH_MAP_AUDIT.md: V650
-  - docs\RESEARCH_MAP_AUDIT.md: V655
-  - docs\RESEARCH_MAP_AUDIT.md: V674
-  - docs\RESEARCH_MAP_AUDIT.md: V674
-  - docs\STRATEGY.md: V399
-  - docs\STRATEGY.md: V520
-  - docs\STRATEGY.md: V521
-  - docs\STRATEGY.md: V573
-  - docs\STRATEGY.md: V562
-  - docs\STRATEGY.md: V630
-  - docs\STRATEGY.md: V589
-  - docs\STRATEGY.md: V650
-  - docs\STRATEGY.md: V655
-  - docs\STRATEGY.md: V674
-  - docs\STRATEGY_AUDIT.md: V573
-  - docs\STRATEGY_AUDIT.md: V562
-  - docs\STRATEGY_AUDIT.md: V630
-  - docs\STRATEGY_AUDIT.md: V674
-  - docs\STRATEGY_AUDIT.md: V573
-  - docs\STRATEGY_AUDIT.md: V562
-  - docs\STRATEGY_AUDIT.md: V630
-  - docs\STRATEGY_AUDIT.md: V674
-  - docs\STRATEGY_AUDIT.md: V674
-  - docs\WK1400_SOURCE_AUDIT.md: V260
-  - docs\WK1400_SOURCE_AUDIT_AUDIT.md: V260
-  - docs\bugs\canvas-getcontext-uaf.md: V573
-  - docs\bugs\canvas-getcontext-uaf.md: V573
-  - docs\bugs\canvas-getcontext-uaf.md: V562
-  - docs\bugs\canvas-getcontext-uaf.md: V630
-  - docs\bugs\canvas-getcontext-uaf.md: V674
-  - docs\bugs\canvas-getcontext-uaf.md: V674
-  - docs\bugs\canvas-getcontext-uaf.md: V460
-  - docs\bugs\canvas-getcontext-uaf.md: V461
-  - docs\bugs\canvas-getcontext-uaf.md: V527
-  - docs\bugs\canvas-getcontext-uaf.md: V527
-  - docs\bugs\canvas-getcontext-uaf.md: V548
-  - docs\bugs\canvas-getcontext-uaf.md: V550
-  - docs\bugs\canvas-getcontext-uaf.md: V562
-  - docs\bugs\canvas-getcontext-uaf.md: V573
-  - docs\bugs\canvas-getcontext-uaf.md: V589
-  - docs\bugs\canvas-getcontext-uaf.md: V630
-  - docs\bugs\canvas-getcontext-uaf.md: V674
-  - docs\bugs\cssfontface-uaf.md: V399
-  - docs\bugs\tee-type-confusion.md: V432
-  - docs\bugs\transformstream-disconnect.md: V431
-  - docs\reports\EXPLOIT-PLAN-METADATA-OOB.md: V151
-  - docs\reports\STATUS-REPORT-v80.md: V220
-  - docs\reports\STATUS-REPORT-v80.md: V221
-  - docs\reports\STATUS-REPORT-v80.md: V190
-  - docs\reports\STATUS-REPORT-v80.md: V190
-  - docs\reports\STATUS-REPORT-v80.md: V240
-  - docs\reports\STATUS-REPORT-v80.md: V190
-  - docs\reports\STATUS-REPORT-v80.md: V190
-  - docs\reports\STATUS-REPORT-v80.md: V190
-  - docs\reports\STATUS-REPORT-v80.md: V180
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
-  - docs\scratch\p135-beacon-check-dsh-report.md: V136
-  - docs\scratch\p135-beacon-check-dsh-report.md: V137
-  - docs\scratch\p135-beacon-check-dsh-report.md: V135
 
-CONFIRMED lines found: 10
-  - docs\ATTACK_SURFACE.md: CONFIRMED@64
-  - docs\AUDIT_REPORT.md: CONFIRMED@27
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@5
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@11
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@68
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@91
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@113
-  - docs\CONFIRMED_VULNS.md: CONFIRMED@128
-  - docs\DEAD_ENDS.md: CONFIRMED@137
-  - docs\reports\STATUS-REPORT-v80.md: CONFIRMED@16
+
+--- docs\API_FINGERPRINT.md ---
+  V-refs without evidence (3): V399, V520, V521
+  CONTRADICTION: Gigacage DISABLED claim may be runtime-dependent
+
+--- docs\API_FINGERPRINT_AUDIT.md ---
+  V-refs without evidence (3): V399, V520, V521
+
+--- docs\ATTACK_SURFACE.md ---
+  CONTRADICTION: BYOB listed as available but may not be implemented
+
+--- docs\ATTACK_SURFACE_AUDIT.md ---
+  V-refs without evidence (3): V562, V573, V630
+
+--- docs\AUDIT_REPORT.md ---
+  V-refs without evidence (15): V415, V429, V430, V432, V460, V461, V527, V548, V550, V562, V573, V589, V630, V632, V641
+  CONTRADICTION: Heap size 384-512 B may be incorrect (mja00: 712 B)
+  SOURCE ISSUE: Claims source validation but no line references
+
+--- docs\BUGS_AUDIT.md ---
+  V-refs without evidence (5): V562, V573, V589, V630, V674
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+
+--- docs\CONFIRMED_VULNS.md ---
+  V-refs without evidence (15): V415, V429, V430, V432, V460, V461, V527, V548, V550, V562, V573, V589, V630, V632, V641
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+
+--- docs\CONSOLIDATED_REPORT.md ---
+  V-refs without evidence (53): V135, V136, V137, V151, V180, V190, V220, V221, V240, V241, V243, V246, V260, V287, V330, V345, V399, V400, V402, V405, V415, V416, V418, V419, V422, V429, V430, V431, V432, V438, V460, V461, V520, V521, V527, V548, V550, V562, V563, V566, V573, V580, V583, V587, V588, V589, V627, V630, V632, V641, V650, V655, V674
+  CONTRADICTION: Heap size 384-512 B may be incorrect (mja00: 712 B)
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+  CONTRADICTION: Guard count '22 logging-only' may be incorrect (actual: 47 lines, 2 security-relevant)
+
+--- docs\CONTRADICTION_REPORT.md ---
+  CONTRADICTION: Heap size 384-512 B may be incorrect (mja00: 712 B)
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+  CONTRADICTION: Guard count '22 logging-only' may be incorrect (actual: 47 lines, 2 security-relevant)
+
+--- docs\DEAD_ENDS.md ---
+  V-refs without evidence (21): V240, V241, V260, V287, V330, V345, V400, V402, V405, V416, V418, V419, V422, V438, V563, V566, V573, V588, V627, V630, V641
+
+--- docs\FINDINGS.md ---
+  V-refs without evidence (8): V180, V190, V221, V243, V246, V573, V587, V589
+  CONTRADICTION: unitsPerEm=0: contradictory verdict (renders vs REJECTED)
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+  CONTRADICTION: Claims freed memory stays mapped without addressing decommit of small blocks
+
+--- docs\FIRMWARE_14.0_VS_14.10.md ---
+  SOURCE ISSUE: Claims source validation but no line references
+
+--- docs\PLATFORM_PLAYSTATION.md ---
+  CONTRADICTION: Guard count '22 logging-only' may be incorrect (actual: 47 lines, 2 security-relevant)
+
+--- docs\PLATFORM_PLAYSTATION_GUARDS.md ---
+  CONTRADICTION: Guard count '22 logging-only' may be incorrect (actual: 47 lines, 2 security-relevant)
+
+--- docs\PROBE_INDEX.md ---
+  V-refs without evidence (1): V627
+
+--- docs\PROBE_INDEX_AUDIT.md ---
+  V-refs without evidence (1): V641
+
+--- docs\PROGRESS_AUDIT.md ---
+  V-refs without evidence (11): V399, V520, V521, V562, V573, V580, V583, V630, V650, V655, V674
+
+--- docs\RESEARCH_MAP.md ---
+  V-refs without evidence (7): V562, V573, V589, V630, V650, V655, V674
+
+--- docs\RESEARCH_MAP_AUDIT.md ---
+  V-refs without evidence (7): V562, V573, V589, V630, V650, V655, V674
+
+--- docs\STRATEGY.md ---
+  V-refs without evidence (10): V399, V520, V521, V562, V573, V589, V630, V650, V655, V674
+
+--- docs\STRATEGY_AUDIT.md ---
+  V-refs without evidence (4): V562, V573, V630, V674
+
+--- docs\WK1400_SOURCE_AUDIT.md ---
+  V-refs without evidence (1): V260
+  CONTRADICTION: IsoHeap claimed ON but is OFF on PS5 (IsoMalloc.h:31)
+
+--- docs\WK1400_SOURCE_AUDIT_AUDIT.md ---
+  V-refs without evidence (1): V260
+  CONTRADICTION: IsoHeap claimed ON but is OFF on PS5 (IsoMalloc.h:31)
+
+--- docs\WORKFLOW.md ---
+  V-refs without evidence (1): V674
+
+--- docs\analysis\heap-model.md ---
+  CONTRADICTION: Gigacage DISABLED claim may be runtime-dependent
+
+--- docs\bugs\canvas-getcontext-uaf.md ---
+  V-refs without evidence (10): V460, V461, V527, V548, V550, V562, V573, V589, V630, V674
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+
+--- docs\bugs\cssfontface-uaf.md ---
+  V-refs without evidence (1): V399
+
+--- docs\bugs\tee-type-confusion.md ---
+  V-refs without evidence (1): V432
+  SOURCE ISSUE: Claims source validation but no line references
+
+--- docs\bugs\transformstream-disconnect.md ---
+  V-refs without evidence (1): V431
+
+--- docs\reports\AI_Learning.md ---
+  CONTRADICTION: State buffer 6400 B may be incorrect (mja00: 8192 B)
+
+--- docs\reports\EXPLOIT-PLAN-METADATA-OOB.md ---
+  V-refs without evidence (1): V151
+
+--- docs\reports\EXPLOIT_PLAN_METADATA_OOB_AUDIT.md ---
+  V-refs without evidence (2): V527, V630
+
+--- docs\reports\STATUS-REPORT-v80.md ---
+  V-refs without evidence (5): V180, V190, V220, V221, V240
+
+--- docs\reports\STATUS_REPORT_v80_AUDIT.md ---
+  V-refs without evidence (1): V190
+
+--- docs\scratch\p135-beacon-check-dsh-report.md ---
+  V-refs without evidence (3): V135, V136, V137
+
+============================================================
+SUMMARY
+============================================================
+Total V-refs without evidence: 195
+Total contradictions detected: 21
+Total source issues detected: 3
+Result files: 5
+Traceback (most recent call last):
+  File "C:\Users\origi\Documents\Proyecto predeterminado\repo\tools\claim_audit.py", line 120, in <module>
+    PY
+NameError: name 'PY' is not defined
 
 
 ----------------------------------------
@@ -386,6 +153,7 @@ CONFIRMED lines found: 10
 === CONTRADICTION DETECTOR ===
 
   [docs\AUDIT_REPORT.md] Heap size 384-512 B may be incorrect (mja00: 712 B)
+  [docs\BUGS_AUDIT.md] State buffer 6400 B may be incorrect (mja00: 8192 B)
   [docs\CONFIRMED_VULNS.md] State buffer 6400 B may be incorrect (mja00: 8192 B)
   [docs\CONSOLIDATED_REPORT.md] Heap size 384-512 B may be incorrect (mja00: 712 B)
   [docs\CONSOLIDATED_REPORT.md] State buffer 6400 B may be incorrect (mja00: 8192 B)
@@ -405,7 +173,7 @@ CONFIRMED lines found: 10
   [README.md] BYOB readers available: 5 docs say BYOB not implemented on 14.10
   [README.md] freed memory stays mapped: Only large blocks; small blocks decommit
 
-Total detected: 11
+Total detected: 12
 
 
 ----------------------------------------
@@ -413,16 +181,22 @@ Total detected: 11
 ----------------------------------------
   API.md: 39 lines
   API_FINGERPRINT.md: 106 lines
+  API_FINGERPRINT_AUDIT.md: 54 lines
   ASTRA-SANITIZATION-GUIDE.md: 121 lines
   ATTACK_SURFACE.md: 87 lines
+  ATTACK_SURFACE_AUDIT.md: 36 lines
   AUDIT_REPORT.md: 83 lines
+  BUGS_AUDIT.md: 85 lines
   CONFIRMED_VULNS.md: 178 lines
-  CONSOLIDATED_REPORT.md: 338 lines
+  CONSOLIDATED_REPORT.md: 519 lines
   CONTRADICTION_REPORT.md: 40 lines
   CONTRIBUTION_GUIDE.md: 57 lines
   DEAD_ENDS.md: 318 lines
   EXPLOITATION_ENVIRONMENT.md: 62 lines
+  EXPLOITATION_ENVIRONMENT_AUDIT.md: 49 lines
   FINDINGS.md: 155 lines
+  FIRMWARE_14.0_VS_14.10.md: 75 lines
+  HARDWARE_MEASUREMENT_GUIDE.md: 132 lines
   KERNEL_AUDIT.md: 59 lines
   LOCAL_REPRO_GUIDE.md: 125 lines
   PLATFORM_PLAYSTATION.md: 112 lines
@@ -438,7 +212,18 @@ Total detected: 11
   VP_DEAD_END_INVESTIGATION.md: 339 lines
   WK1400_SOURCE_AUDIT.md: 93 lines
   WK1400_SOURCE_AUDIT_AUDIT.md: 92 lines
+  WORKFLOW.md: 190 lines
   WORK_SUMMARY.md: 93 lines
+  reports/AI_LEARNING_AUDIT.md: 38 lines
+  reports/AI_Learning.md: 278 lines
+  reports/CRITICAL-p150e-fix.md: 56 lines
+  reports/CRITICAL_p150e_fix_AUDIT.md: 44 lines
+  reports/DISPATCH_GUIDE_METADATA_OVERFLOW_AUDIT.md: 74 lines
+  reports/EXPLOIT-PLAN-METADATA-OOB.md: 173 lines
+  reports/EXPLOIT_PLAN_METADATA_OOB_AUDIT.md: 77 lines
+  reports/STATUS-REPORT-v80.md: 80 lines
+  reports/STATUS_REPORT_v80_AUDIT.md: 44 lines
+  reports/dispatch-guide-metadata-overflow.md: 661 lines
 
 ----------------------------------------
 4. OFFSET FILES
@@ -484,10 +269,35 @@ Total detected: 11
 ----------------------------------------
 5. PROBE FILES
 ----------------------------------------
-  Total probe files: 1211
+  Total probe files: 1214
 
 ----------------------------------------
-6. KEY VALIDATED CLAIMS (from source analysis)
+6. TOOLS
+----------------------------------------
+  beacon_template.py: 75 lines
+  build_assets_test.py: 199 lines
+  build_customization_test.py: 165 lines
+  build_host.py: 261 lines
+  build_poops_payload.py: 444 lines
+  build_standalone.py: 1010 lines
+  claim_audit.py: 120 lines
+  consolidated_report.py: 184 lines
+  contradiction_detector.py: 66 lines
+  cve-commit-map.py: 220 lines
+  ftp_client_test.py: 197 lines
+  gen_icons.py: 104 lines
+  gen_installer_registry.py: 259 lines
+  gen_version.py: 272 lines
+  host.py: 1509 lines
+  host_standalone.py: 385 lines
+  installer_common_test.py: 205 lines
+  send.py: 257 lines
+  sweep_summary.py: 200 lines
+  ws_server.py: 236 lines
+  ws_server_v2.py: 312 lines
+
+----------------------------------------
+7. KEY VALIDATED CLAIMS (from source analysis)
 ----------------------------------------
   CVE-2026-43720 re-entrancy: HTMLCanvasElement.cpp:226 vs :268 [OK]
   IsoHeap OFF: IsoMalloc.h:31 [OK]
@@ -500,7 +310,7 @@ Total detected: 11
   Guards: 47 lines, 31 files, 2 security-relevant — repo said 22 logging-only [WARN]
 
 ----------------------------------------
-7. AUDIT DOCS CREATED
+8. AUDIT DOCS CREATED
 ----------------------------------------
   docs/AUDIT_REPORT.md: 83 lines [OK]
   docs/PLATFORM_PLAYSTATION_GUARDS.md: 160 lines [OK]
@@ -510,9 +320,22 @@ Total detected: 11
   docs/PROBE_INDEX_AUDIT.md: 61 lines [OK]
   docs/WK1400_SOURCE_AUDIT_AUDIT.md: 92 lines [OK]
   docs/SONY_CRASH_TESTS.md: 74 lines [OK]
+  docs/EXPLOITATION_ENVIRONMENT_AUDIT.md: 49 lines [OK]
+  docs/BUGS_AUDIT.md: 85 lines [OK]
+  docs/API_FINGERPRINT_AUDIT.md: 54 lines [OK]
+  docs/ATTACK_SURFACE_AUDIT.md: 36 lines [OK]
   docs/LOCAL_REPRO_GUIDE.md: 125 lines [OK]
   docs/CONTRIBUTION_GUIDE.md: 57 lines [OK]
+  docs/WORKFLOW.md: 190 lines [OK]
+  docs/HARDWARE_MEASUREMENT_GUIDE.md: 132 lines [OK]
+  docs/FIRMWARE_14.0_VS_14.10.md: 75 lines [OK]
   docs/WORK_SUMMARY.md: 93 lines [OK]
+  docs/CONSOLIDATED_REPORT.md: 519 lines [OK]
+  docs/reports/STATUS_REPORT_v80_AUDIT.md: 44 lines [OK]
+  docs/reports/EXPLOIT_PLAN_METADATA_OOB_AUDIT.md: 77 lines [OK]
+  docs/reports/AI_LEARNING_AUDIT.md: 38 lines [OK]
+  docs/reports/CRITICAL_p150e_fix_AUDIT.md: 44 lines [OK]
+  docs/reports/DISPATCH_GUIDE_METADATA_OVERFLOW_AUDIT.md: 74 lines [OK]
 
 ================================================================================
 END OF REPORT

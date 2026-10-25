@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>API-AVAILABILITY-PROBE: Comprehensive API check for 14.0</title>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+#log { white-space: pre; font-size:12px; }
+</style>
+</head>
+<body>
+<h2>API-AVAILABILITY-PROBE</h2>
+<div id="log"></div>
+<script>
+const logEl = document.getElementById('log');
+function L(msg) { console.log(msg); logEl.textContent += msg + "\n"; }
+
+const apis = [
+  ['AudioContext', 'AudioContext'],
+  ['IndexedDB', 'indexedDB'],
+  ['WebGL', 'WebGLRenderingContext'],
+  ['WebGL2', 'WebGL2RenderingContext'],
+  ['WebAssembly', 'WebAssembly'],
+  ['SharedArrayBuffer', 'SharedArrayBuffer'],
+  ['ServiceWorker', 'ServiceWorker'],
+  ['WebRTC', 'RTCPeerConnection'],
+  ['WebGPU', 'navigator.gpu'],
+  ['WebAudio', 'AudioContext'],
+  ['OffscreenCanvas', 'OffscreenCanvas'],
+  ['Clipboard', 'navigator.clipboard'],
+  ['Popover', 'HTMLElement.prototype.showPopover'],
+  ['AbortSignal.any', 'AbortSignal.any'],
+  ['WebM', 'MediaSource.isTypeSupported("video/webm")'],
+  ['TransformStream', 'TransformStream'],
+  ['WritableStream', 'WritableStream'],
+  ['ReadableStream', 'ReadableStream'],
+  ['MessageChannel', 'MessageChannel'],
+  ['structuredClone', 'structuredClone'],
+  ['WeakRef', 'WeakRef'],
+  ['FinalizationRegistry', 'FinalizationRegistry'],
+  ['Proxy', 'Proxy'],
+  ['BigInt', 'BigInt'],
+  ['Atomics', 'Atomics'],
+  ['ResizableArrayBuffer', 'ArrayBuffer.prototype.resize'],
+];
+
+L("Comprehensive API availability check for 14.0:");
+L("");
+for (const [name, expr] of apis) {
+  let available = false;
+  try {
+    available = eval(`typeof ${expr} !== 'undefined'`);
+  } catch (e) {
+    available = false;
+  }
+  L(name + ": " + (available ? "AVAILABLE" : "NOT AVAILABLE"));
+}
+
+L("");
+L("Probe complete.");
+</script>
+</body>
+</html>
+PY
